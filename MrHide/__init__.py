@@ -97,10 +97,10 @@ class MrHide(object):
 		if self.options.skip_posts:
 			return
 		outputPostsFolder = os.path.join(self.options.target, defines.posts)
-		if not os.path.exists(os.path.join(outputPostsFolder, post['id'])):
-			os.makedirs(os.path.join(outputPostsFolder, post['id']))
+		if not os.path.exists(os.path.join(outputPostsFolder, post['id'].encode('utf-8')))):
+			os.makedirs(os.path.join(outputPostsFolder, post['id'].encode('utf-8')))
 		
-		postPath = os.path.join(outputPostsFolder, post['id'], 'index.html')
+		postPath = os.path.join(outputPostsFolder, post['id'].encode('utf-8'), 'index.html')
 		logging.debug('Generating post: %s' % postPath)
 		with open(postPath, 'w') as postFile:
 			template = self.templates.get_template(defines.postTemplate)
@@ -122,10 +122,10 @@ class MrHide(object):
 		if self.options.skip_tags:
 			return
 		outputTagsFolder = os.path.join(self.options.target, defines.tags)
-		if not os.path.exists(os.path.join(outputTagsFolder, tag, str(pageNumber))):
-			os.makedirs(os.path.join(outputTagsFolder, tag, str(pageNumber)))
+		if not os.path.exists(os.path.join(outputTagsFolder, tag.encode('utf-8'), str(pageNumber))):
+			os.makedirs(os.path.join(outputTagsFolder, tag.encode('utf-8'), str(pageNumber)))
 		
-		pagePath = os.path.join(outputTagsFolder, tag, str(pageNumber), 'index.html')
+		pagePath = os.path.join(outputTagsFolder, tag.encode('utf-8'), str(pageNumber), 'index.html')
 		logging.debug('Generating tag %s page #%d with %d posts: %s' % (tag, pageNumber, len(page), pagePath) )
 		self._GeneratePage(pagePath, pageNumber, totalPages, page, filters = {'tag' : tag})
 			
