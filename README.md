@@ -137,3 +137,10 @@ indexTemplate = 'index.mako' _name of template for summary page_
       --skip-resources      Do not generate resources & scripts.
       --skip-indexes        Do not generate index files.
 
+##License##
+
+Mr. Hide is under cc by-nc-sa license.
+
+###Attribution Non-Commercial Share Alike###
+
+This license lets others remix, tweak, and build upon your work non-commercially, as long as they credit you and license their new creations under the identical terms. Others can download and redistribute your work just like the by-nc-nd license, but they can also translate, make remixes, and produce new stories based on your work. All new work based on yours will carry the same license, so any derivatives will also be non-commercial in nature.
