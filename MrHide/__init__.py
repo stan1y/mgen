@@ -220,6 +220,7 @@ class MrHide(object):
 		#Paginate posts with tags
 		print 'Generating %d tag pages' % len(tags)
 		for tag in tags:
+			print 'Processing tag %s' % tag.encode('utf-8')
 			postsWithTag = tags[tag]
 			
 			#Sort posts with tag by date
