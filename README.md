@@ -27,25 +27,33 @@ trivial. Should be something like:
     scp -r /var/www/myblog/* me@server.com:/var/www/production/myblog/
     ssh me@server.com sh /etc/init.d/nginx reload
 
-##HTML Pages Generation## 
+##HTML Pages Generation##
 
 There are *three* expected templates to be found by generator of html. The
 templates are rendered with the following arguments available at generation time:
- - *post.mako* Template for single post entry. It should host whatever commenting system you'd like. Discuss works fine, but pretty anything should work.
- -- _dict_ *post* - The dictionary with post data
- --- _unicode_ *title* - The title
- --- _datetime_ *date* - Published date
- --- _list_ *text* - List of unicode strings with post content
+####post.mako####
+Template for single post entry. It should host whatever commenting system you'd like. Discuss works fine, but pretty anything should work.
+- _dict_ *post* - The dictionary with post data
+  Post dictionary keys:
+- _unicode_ *title* - The title
+- _datetime_ *date* - Published date
+- _list_ *text* - List of unicode strings with post content
 
-- *page.mako* Template for a single page with posts.
- -- _list_ *page* - List of dictionaries with posts of the page. See post.mako
- -- _int_ *pageNumber* - Current page number
- -- _int_ *totalPages* - Total pages to go
- -- _dict_ *filters* - Filters dict if any or empty dict. Filters may by tags, or date or something else. Item key is a filter name, value is a filter argument. Example: filters : { 'tag' : 'SomeTag' , 'year' : '2008' }. 
+####page.mako####
 
-- *index.mako* Template for blog index page with summary of posts & tags.
--- _list_ *posts* - All posts
--- _list_ *tags* - All tags
+Template for a single page with posts.
+
+- _list_ *page* - List of dictionaries with posts of the page. See post.mako
+- _int_ *pageNumber* - Current page number
+- _int_ *totalPages* - Total pages to go
+- _dict_ *filters* - Filters dict if any or empty dict. Filters may by tags, or date or something else. Item key is a filter name, value is a filter argument. Example: filters : { 'tag' : 'SomeTag' , 'year' : '2008' }. 
+
+####index.mako####
+
+Template for blog index page with summary of posts & tags.
+
+- _list_ *posts* - All posts
+- _list_ *tags* - All tags
 
 The structure of expected _source_ folder:
     MyBlog
@@ -58,10 +66,11 @@ The structure of expected _source_ folder:
 In order to have links to resources and generated html pages consistent and correct you need to
 use provided *helpers*. The *helpers* module may import any other tool useful for you. It provides
 to following methods _recommended_ for use:
- - format_timestamp(datetime) - Returns string with neat datetime format readable for humans
- - resource('path/to/res') - Builds a path something you put in resources
- - link('path/to/page') - Builds a path to generated html page. You should specify paths according to *generated layout* (See below)
- - cut(text, index) - If specified index is good to break(See shouldBreak) returns text cutted at index. Otherwise scans for first good to break index before specified in reversed order. Useful to create "read more..." links.
+
+- format_timestamp(datetime) Returns string with neat datetime format readable for humans
+- resource('path/to/res') Builds a path something you put in resources
+- link('path/to/page') Builds a path to generated html page. You should specify paths according to *generated layout* (See below)
+- cut(text, index)  If specified index is good to break(See shouldBreak) returns text cutted at index. Otherwise scans for first good to break index before specified in reversed order. Useful to create "read more..." links.
 
 ## Generated Layout ##
 
@@ -127,5 +136,4 @@ indexTemplate = 'index.mako' _name of template for summary page_
       --skip-rss            Do not generate rss feeds.
       --skip-resources      Do not generate resources & scripts.
       --skip-indexes        Do not generate index files.
-
 
