@@ -97,7 +97,7 @@ class MrHide(object):
 		if self.options.skip_posts:
 			return
 		outputPostsFolder = os.path.join(self.options.target, defines.posts)
-		if not os.path.exists(os.path.join(outputPostsFolder, post['id'].encode('utf-8')))):
+		if not os.path.exists(os.path.join(outputPostsFolder, post['id'].encode('utf-8'))):
 			os.makedirs(os.path.join(outputPostsFolder, post['id'].encode('utf-8')))
 		
 		postPath = os.path.join(outputPostsFolder, post['id'].encode('utf-8'), 'index.html')
@@ -126,7 +126,7 @@ class MrHide(object):
 			os.makedirs(os.path.join(outputTagsFolder, tag.encode('utf-8'), str(pageNumber)))
 		
 		pagePath = os.path.join(outputTagsFolder, tag.encode('utf-8'), str(pageNumber), 'index.html')
-		logging.debug('Generating tag %s page #%d with %d posts: %s' % (tag, pageNumber, len(page), pagePath) )
+		logging.debug('Generating tag %s page #%d with %d posts: %s' % (tag.encode('utf-8'), pageNumber, len(page), pagePath) )
 		self._GeneratePage(pagePath, pageNumber, totalPages, page, filters = {'tag' : tag})
 			
 	def _GeneratePage(self, pagePath, pageNumber, totalPages, page, filters = {}):
@@ -214,7 +214,7 @@ class MrHide(object):
 			self.GeneratePage(pageNumber, len(pages), pages[pageNumber])
 		
 		#Paginate posts with tags
-		print 'Generating %d tags' % len(tags)
+		print 'Generating %d tag pages' % len(tags)
 		for tag in tags:
 			postsWithTag = tags[tag]
 			
