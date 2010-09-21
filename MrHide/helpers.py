@@ -52,13 +52,13 @@ def format_timestamp(timestamp):
 	delta = datetime.datetime.now() - timestamp
 	if delta.days > 0:
 		if delta.days == 1:
-			return '%s day ago on %s' % ( delta.days, timestamp.strftime("%A, %d. %B %Y %I:%M%p") )
+			return '%s day ago on %s' % ( delta.days, timestamp.strftime("%A, %d. %B %Y") )
 		else:
-			return '%s days ago on %s' % ( delta.days, timestamp.strftime("%A, %d. %B %Y %I:%M%p") )
+			return '%s days ago on %s' % ( delta.days, timestamp.strftime("%A, %d. %B %Y") )
 	elif (delta.seconds	 < 3600):
 		if (delta.seconds / 60) > 1:
 			return '%s minutes ago' % (delta.seconds / 60)
 		else:
 			return '%s minute ago' % (delta.seconds / 60)
 	else:
-		return 'on %s ' % timestamp.strftime("%A, %d. %B %Y %I:%M%p")
+		return 'on %s ' % timestamp.strftime("%A, %d. %B %Y")
