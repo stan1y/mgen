@@ -21,13 +21,13 @@ So Basically you store you blog content & media somewhere safe up in clouds, lik
 you want to publish a new post or edit existing or just update your markup, you need to call Mr.Hide to generate html for
 you. Then you sync your changes to remote host or update your local http server for debugging. Automation of it is fairly
 trivial. Should be something like:
-   #!/bin/bash
-   cd src/mysite
-   mrhide --source . --target /var/www/myblog --root /myblog
-   scp -r /var/www/myblog/* me@server.com:/var/www/production/myblog/
-   ssh me@server.com sh /etc/init.d/nginx reload
+    #!/bin/bash
+    cd src/mysite
+    mrhide --source . --target /var/www/myblog --root /myblog
+    scp -r /var/www/myblog/* me@server.com:/var/www/production/myblog/
+    ssh me@server.com sh /etc/init.d/nginx reload
 
-## HTML Pages Generation ## 
+##HTML Pages Generation## 
 
 There are *three* expected templates to be found by generator of html. The
 templates are rendered with the following arguments available at generation time:
@@ -53,7 +53,7 @@ The structure of expected _source_ folder:
     |-resources/*		(Put your css, js, images and other stuff you may need in template markup)
     |-templates/*.mako	(You actual markup files. Index page, Post template & Page template)
 
-## Helpers ##
+##Helpers##
 
 In order to have links to resources and generated html pages consistent and correct you need to
 use provided *helpers*. The *helpers* module may import any other tool useful for you. It provides
