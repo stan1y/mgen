@@ -1,8 +1,8 @@
-"""Helper functions
+#
+# Mr. Hide Site Genetator
+# Copyright Stanislav Yudin, 2010
+#
 
-Consists of functions to typically be used within templates, but also
-available to Controllers. This module is available to templates as 'h'.
-"""
 import os
 import sys
 import random

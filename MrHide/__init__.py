@@ -1,3 +1,7 @@
+#
+# Mr. Hide Site Genetator
+# Copyright Stanislav Yudin, 2010
+#
 
 __version__ = '0.1'
 

@@ -1,4 +1,9 @@
 #!/usr/bin/python
+#
+# Mr. Hide Site Genetator
+# Copyright Stanislav Yudin, 2010
+#
+
 import os
 import sys
 import logging

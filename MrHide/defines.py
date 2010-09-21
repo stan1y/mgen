@@ -1,3 +1,7 @@
+#
+# Mr. Hide Site Genetator
+# Copyright Stanislav Yudin, 2010
+#
 
 # Output folders per category of generated content
 resources = 'res'

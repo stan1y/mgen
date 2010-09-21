@@ -1,3 +1,9 @@
+#!/usr/bin/python
+#
+# Mr. Hide Site Genetator
+# Copyright Stanislav Yudin, 2010
+#
+
 try:
 	from setuptools import setup, find_packages
 except ImportError:
