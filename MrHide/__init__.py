@@ -80,7 +80,7 @@ class MrHide(object):
 		return post
 		
 	def PostID(self, post):
-		return post['title'].replace(' ', '-')
+		return post['title'].replace(' ', '-').replace(',', '-').replace('.', '-').replace('!', '-').replace('?', '-')
 		
 	def GenerateResources(self):
 		if self.options.skip_resources:
