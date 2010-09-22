@@ -12,6 +12,23 @@ and contain the following format:
 The post content is read from the next line after _text_ section is found. Text read from section is
 a some sort of *kown* format, with markdown suggested by default but anything like Textile or BBCode can be used.
 
+##Installation##
+
+Simply clone Mr.Hide and install with setup.py
+    git clone git://github.com/AwesomeStanly/MrHide.git mrhide
+    cd mrhide
+    sudo python setup.py install
+
+Dependences with default features:
+
+- Mako >= 0.2.5
+- markdown >= 2.0
+
+Optional:
+
+- unidecode >= 0.04 (git clone http://code.zemanta.com/tsolc/git/unidecode)
+
+
 ## How Mr. Hide works ##
 
 Your website is represented by a number of files used by Mr. Hide to generate html pages, robots.txt, rrs feeds and 
@@ -89,12 +106,7 @@ The generated html, resources, rss feeds layout.
 - /tag/[name]/feed.rss
 
 Static resources for templates used in markup
-
 - %source/{defines.inResources} -> %target/{defines.resources}
-
-Dynamic content used in blog post markups (source/posts/*.md)
-
-- %source/{defines.inMedia} -> %target/{defines.media}
 
 ## Configurable defaults ##
 
@@ -129,10 +141,19 @@ indexTemplate = 'index.mako' _name of template for summary page_
                             Path to blog posts
       -t TARGET, --target=TARGET
                             Path where to put results
-      -p POSTS, --posts=POSTS
-                            Number of posts per page
+      -u URL, --url=URL     An external wellformed url to deployed website,
+                            excluding webroot.
       -r WEBROOT, --webroot=WEBROOT
-                            Root path of deployed website.
+
+      --posts=POSTS         Number of posts per page. Default is 10.
+      --items=ITEMS         Number of items per rss feed. Default is 50.
+      --title=TITLE         Title your of generated rss feeds. Default is
+                              capitalized source folder name.
+      --lang=LANG           Language of your site. Default is 'en'
+      --cut-at=CUT_AT       A size of description text of rss feed item, extracted
+                              from post content.
+      --transliterate       Convert unicode in post id to transliterated version.
+                              Requries 'unidecode'
       --clear               Remove target if any.
       --skip-posts          Do not generate posts.
       --skip-pages          Do not generate pages.
