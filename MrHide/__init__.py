@@ -234,7 +234,7 @@ class MrHide(object):
 			postIndex = 0
 			for post in postsWithTag:
 				postPage.append(post)
-				if postIndex == self.options.posts or len(postsWithTag) < self.options.posts:
+				if postIndex == self.options.posts or (postIndex + 1 == len(postsWithTag)):
 					self.GeneragteTagPage(tagPageNumber, totalPagesWithTag, postPage, tag)
 					postPage = []
 					tagPageNumber += 1
