@@ -277,7 +277,7 @@ class MrHide(object):
 		postsFeedPath = os.path.join(outputPostsFolder, 'feed.rss')
 		postsTitle = 'Posts of %s' % self.options.title
 		postsDesc = 'Last %d posts of %s' % (self.options.items, self.options.title)
-		self._GenerateFeed(postsFeedPath, '/post/', postSizes, posts[:self.options.items], postsTitle, postsDesc)
+		self._GenerateFeed(postsFeedPath, self.options.webroot + '/post/', postSizes, posts[:self.options.items], postsTitle, postsDesc)
 		
 		#Tag feeds
 		for tag in tags.keys():
@@ -285,7 +285,7 @@ class MrHide(object):
 			postsWithTag = tags[tag]
 			tagTitle = 'Posts of %s with tag %s' % (self.options.title, tag)
 			tagDesc = 'Last %d posts of %s with tag %s' % ( len(postsWithTag), self.options.title, tag)
-			self._GenerateFeed(tagFeedPath, '/tag/%s' % tag, postSizes, postsWithTag, tagTitle, tagDesc)
+			self._GenerateFeed(tagFeedPath, self.options.webroot + '/tag/%s' % tag, postSizes, postsWithTag, tagTitle, tagDesc)
 		
 	def Generate(self):
 		logging.debug('Reading site %s' % self.options.source)
