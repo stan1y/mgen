@@ -32,7 +32,9 @@ trivial. Should be something like:
 There are *three* expected templates to be found by generator of html. The
 templates are rendered with the following arguments available at generation time:
 ####post.mako####
+
 Template for single post entry. It should host whatever commenting system you'd like. Discuss works fine, but pretty anything should work.
+
 - _dict_ *post* - The dictionary with post data
   Post dictionary keys:
 - _unicode_ *title* - The title
