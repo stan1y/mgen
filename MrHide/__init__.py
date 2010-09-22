@@ -58,7 +58,7 @@ rssTemplate = '''
 			<item>
 				<title>${post['title']}</title>
 				<pubDate>${post['date'].isoformat()}</pubDate>
-				<description>${helpers.markdown.markdown(helpers.cut(''.join(post['text']), cut_at))}</description>
+				<description>${helpers.cgi.escape(helpers.markdown.markdown(helpers.cut(''.join(post['text']), cut_at)))}</description>
 				<enclosure
 					url="${url + webRoot + '/' + post['id']}"
 					type="text/html"
