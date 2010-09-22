@@ -43,9 +43,7 @@ class Post(dict):
 #  string webRoot - options.webroot
 #  dict postSizes - dictioanry with size of each post html, key is post['id']
 
-rssTemplate = '''
-# -*- encoding:utf-8 -*-
-
+rssTemplate = '''# -*- encoding:utf-8 -*-
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
    <channel>
@@ -67,6 +65,41 @@ rssTemplate = '''
 		%endfor
    </channel>
 </rss>
+'''
+
+# Sitemap template
+#
+# Arguments:
+#  list posts - All posts
+#  list pages - All pages
+#  dict tags - All tags
+#  string url - options.url
+#  string webRoot - options.webroot
+siteMapTemplate = '''# -*- encoding:utf-8 -*-
+<?xml version='1.0' encoding='UTF-8'?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+			    http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+	%for post in posts:
+		<url>
+			<loc>${url + webRoot + '/' + post['id']}</loc>
+		</url>
+	%endfor
+	
+	%for pageIndex in range(1, len(pages)):
+		<url>
+			<loc>${url + webRoot + '/page/' + str(pageIndex)}</loc>
+		</url>
+	%endfor
+	
+	%for tag in tags.keys():
+		<url>
+			<loc>${url + webRoot + '/tag/' + tag}</loc>
+		</url>
+	%endfor
+	
+</urlset>
 '''
 
 class MrHide(object):
@@ -286,6 +319,26 @@ class MrHide(object):
 			tagTitle = 'Posts of %s with tag %s' % (self.options.title, tag)
 			tagDesc = 'Last %d posts of %s with tag %s' % ( len(postsWithTag), self.options.title, tag)
 			self._GenerateFeed(tagFeedPath, self.options.webroot + '/tag/%s' % tag, postSizes, postsWithTag, tagTitle, tagDesc)
+			
+	def GenerateSiteMap(self, posts, tags, pages):
+		if self.options.skip_sitemap:
+			return
+			
+		print 'Generating Site map'
+		siteMapPath = os.path.join(self.options.target, 'blog.sitemap')
+		logging.debug('Generating site map with %d post, %d tag pages & %d pages: %s' % ( len(posts), len(tags), len(pages), siteMapPath))
+		tmpl = Template(siteMapTemplate)
+		with open(siteMapPath, 'w') as sitemapFile:
+			#Render reed template to file
+			sitemapFile.write(tmpl.render_unicode(
+				helpers = helpers,
+				posts = posts,
+				tags = tags,
+				pages = pages,
+				url = self.options.url,
+				webRoot = self.options.webroot
+			).encode('utf-8', 'replace'))
+		
 		
 	def Generate(self):
 		logging.debug('Reading site %s' % self.options.source)
@@ -353,8 +406,10 @@ class MrHide(object):
 					
 				postIndex += 1
 		
-		self.GenerateFeeds(posts, tags)
+		
 		self.GenerateResources()
 		self.GenerateIndexes([tag for tag in tags], posts, pages)
+		self.GenerateFeeds(posts, tags)
+		self.GenerateSiteMap(posts, tags, pages)
 		
 		print 'Done.'

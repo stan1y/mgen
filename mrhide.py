@@ -35,6 +35,7 @@ if __name__ == '__main__':
 	parser.add_option("--skip-rss", action="store_true", default=False, help="Do not generate rss feeds.")
 	parser.add_option("--skip-resources", action="store_true", default=False, help="Do not generate resources & scripts.")
 	parser.add_option("--skip-indexes", action="store_true", default=False, help="Do not generate index files.")
+	parser.add_option("--skip-sitemap", action="store_true", default=False, help="Do not generate blog site map.")
 	
 	(options, args) = parser.parse_args()
 
