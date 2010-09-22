@@ -78,7 +78,6 @@ to following methods _recommended_ for use:
 
 The generated html, resources, rss feeds layout.
 
-- /robots.txt
 - /blog.sitemap
 - /index.html
 - /page/[num]/index.html

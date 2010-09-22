@@ -3,7 +3,7 @@
 # Copyright Stanislav Yudin, 2010
 #
 
-__version__ = '0.1'
+__version__ = '0.2'
 
 import os
 import urllib
@@ -29,6 +29,46 @@ class Post(dict):
 		if self['date'] < other['date']: return -1
 		else: return 1
 
+
+# RSS Feed template 
+# Arguments:
+#  string title - options.title
+#  string url - options.url
+#  string desc - a description
+#  string lang - a lang value {en, de, es, etc}
+#  list posts
+# Arguments for item rendering:
+#  helpers & os modules
+#  int cut_at - options.cut_at
+#  string webRoot - options.webroot
+#  dict postSizes - dictioanry with size of each post html, key is post['id']
+
+rssTemplate = '''
+# -*- encoding:utf-8 -*-
+
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+   <channel>
+	  <title>${title}</title>
+	  <link>${url}</link>
+	  <description>${desc}</description>
+	  <language>${lang}</language>
+		%for post in posts:
+			<% postSize = postSizes[post['id']] %>
+			<item>
+				<title>${post['title']}</title>
+				<pubDate>${post['date'].isoformat()}</pubDate>
+				<description>${helpers.markdown.markdown(helpers.cut(''.join(post['text']), cut_at))}</description>
+				<enclosure
+					url="${url + webRoot + '/' + post['id']}"
+					type="text/html"
+					length="${postSize}" />
+			</item>
+		%endfor
+   </channel>
+</rss>
+'''
+
 class MrHide(object):
 	def __init__(self, options):
 		if options.debug:
@@ -39,14 +79,19 @@ class MrHide(object):
 		helpers.webroot = options.webroot
 		
 		print 'Mr.Hide ver. %s' % __version__
-		print 'Source		: %s' % options.source
-		print 'Output		: %s' % options.target
-		print 'Webroot		: %s' % options.webroot
+		print 'Building web blog for:'
+		print ' %s [%s]' % ( options.title, options.url + options.webroot )
+		print 'Source			: %s' % options.source
+		print 'Output			: %s' % options.target
+		print 'Webroot			: %s' % options.webroot
 		print 'Geneator Options'
-		print 'Posts		: %s' % yesno( not options.skip_posts )
-		print 'Pages		: %s' % yesno( not options.skip_pages)
-		print 'Tags		: %s' % yesno( not options.skip_tags)
-		print 'Resources	: %s' % yesno( not options.skip_tags)
+		print 'Posts per page	: %d' % options.posts
+		print 'Items per channel: %d' % options.items
+		print 'Pages			: %s' % yesno( not options.skip_pages)
+		print 'Posts			: %s' % yesno( not options.skip_posts )
+		print 'Pages			: %s' % yesno( not options.skip_pages)
+		print 'Tags			: %s' % yesno( not options.skip_tags)
+		print 'Resources		: %s' % yesno( not options.skip_tags)
 		
 		self.tagsMap = {}
 		self.pagesMap = {}
@@ -61,7 +106,13 @@ class MrHide(object):
 	def date(self, post, value):
 		post['date'] = datetime.datetime.strptime(value.strip(), '%d.%m.%Y')
 	def tags(self, post, value):
-		post['tags'] = [ tag.strip() for tag in value.split(',') if tag]
+		try:
+			if self.options.transliterate:
+				from unidecode import unidecode
+				post['tags'] = [ helpers.urllib.quote(unidecode(tag.strip())) for tag in value.split(',') if tag]
+		except ImportError:
+			post['tags'] = [ helpers.urllib.quote(tag.strip()) for tag in value.split(',') if tag]
+		
 	def text(self, post, value):
 		post['text'] = []
 	
@@ -84,7 +135,16 @@ class MrHide(object):
 		return post
 		
 	def PostID(self, post):
-		return post['title'].replace(' ', '-').replace(',', '-').replace('.', '-').replace('!', '-').replace('?', '-')
+		postId = post['title']
+		for ch in [' ', ',', '.', '!', '?', ';', ':', '/', '-']:
+			if ch in postId:
+				postId = postId.replace(ch, '-')		
+		try:
+			if self.options.transliterate:
+				from unidecode import unidecode
+				return unidecode(postId)
+		except ImportError:
+			return postId
 		
 	def GenerateResources(self):
 		if self.options.skip_resources:
@@ -137,7 +197,7 @@ class MrHide(object):
 		with open(pagePath, 'w') as pageFile:
 			template = self.templates.get_template(defines.pageTemplate)
 			pageFile.write( template.render( encoding = 'utf-8', 
-					helpers = helpers,  
+					helpers = helpers,	
 					filters = filters,
 					pageNumber = pageNumber,
 					totalPages = totalPages, 
@@ -174,6 +234,52 @@ class MrHide(object):
 					tags = tags, 
 					posts = posts,
 					pages = pages) )
+					
+	def _GenerateFeed(self, feedPath, webRoot, postSizes, posts, title, desc):
+			logging.debug('Generating feed with %d items: %s' % (len(posts), feedPath) )
+			feedTemplate = Template(rssTemplate)
+			with open(feedPath, 'w') as feedFile:
+				#Render reed template to file
+				feedFile.write(feedTemplate.render_unicode(
+					title = title,
+					url = self.options.url,
+					desc = desc,
+					lang = self.options.lang,
+					posts = posts,
+					helpers = helpers,
+					cut_at = self.options.cut_at,
+					webRoot = webRoot,
+					os = os,
+					postSizes = postSizes).encode('utf-8', 'replace'))
+	
+	def GenerateFeeds(self, posts, tags):
+		if self.options.skip_rss:
+			return
+			
+		print 'Generating Feeds'
+		
+		outputPostsFolder = os.path.join(self.options.target, defines.posts)
+		outputTagsFolder = os.path.join(self.options.target, defines.tags)
+		
+		postSizes = {}
+		#Get post sizes
+		for postFolder in os.listdir(outputPostsFolder):
+			if os.path.isdir(os.path.join(outputPostsFolder, postFolder)):
+				postSizes[postFolder] = os.path.getsize(os.path.join(outputPostsFolder, postFolder, 'index.html'))
+		
+		#Posts feed
+		postsFeedPath = os.path.join(outputPostsFolder, 'feed.rss')
+		postsTitle = 'Posts of %s' % self.options.title
+		postsDesc = 'Last %d posts of %s' % (self.options.items, self.options.title)
+		self._GenerateFeed(postsFeedPath, '/post/', postSizes, posts[:self.options.items], postsTitle, postsDesc)
+		
+		#Tag feeds
+		for tag in tags.keys():
+			tagFeedPath = os.path.join(outputTagsFolder, tag, 'feed.rss')
+			postsWithTag = tags[tag]
+			tagTitle = 'Posts of %s with tag %s' % (self.options.title, tag)
+			tagDesc = 'Last %d posts of %s with tag %s' % ( len(postsWithTag), self.options.title, tag)
+			self._GenerateFeed(tagFeedPath, '/tag/%s' % tag, postSizes, postsWithTag, tagTitle, tagDesc)
 		
 	def Generate(self):
 		logging.debug('Reading site %s' % self.options.source)
@@ -241,6 +347,7 @@ class MrHide(object):
 					
 				postIndex += 1
 		
+		self.GenerateFeeds(posts, tags)
 		self.GenerateResources()
 		self.GenerateIndexes([tag for tag in tags], posts, pages)
 		
