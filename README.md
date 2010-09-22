@@ -90,8 +90,11 @@ The generated html, resources, rss feeds layout.
 - /tag/[name]/feed.rss
 
 Static resources for templates used in markup
+
 - %source/{defines.inResources} -> %target/{defines.resources}
+
 Dynamic content used in blog post markups (source/posts/*.md)
+
 - %source/{defines.inMedia} -> %target/{defines.media}
 
 ## Configurable defaults ##
