@@ -85,8 +85,8 @@ class MrHide(object):
 		print 'Output			: %s' % options.target
 		print 'Webroot			: %s' % options.webroot
 		print 'Geneator Options'
-		print 'Posts per page	: %d' % options.posts
-		print 'Items per channel: %d' % options.items
+		print 'Posts per page		: %d' % options.posts
+		print 'Items per channel	: %d' % options.items
 		print 'Pages			: %s' % yesno( not options.skip_pages)
 		print 'Posts			: %s' % yesno( not options.skip_posts )
 		print 'Pages			: %s' % yesno( not options.skip_pages)
@@ -110,7 +110,10 @@ class MrHide(object):
 			if self.options.transliterate:
 				from unidecode import unidecode
 				post['tags'] = [ helpers.urllib.quote(unidecode(tag.strip())) for tag in value.split(',') if tag]
+			else:
+				post['tags'] = [ helpers.urllib.quote(tag.strip()) for tag in value.split(',') if tag]
 		except ImportError:
+			print 'Transliteration is OFF, unidecode not found' 
 			post['tags'] = [ helpers.urllib.quote(tag.strip()) for tag in value.split(',') if tag]
 		
 	def text(self, post, value):
@@ -143,7 +146,10 @@ class MrHide(object):
 			if self.options.transliterate:
 				from unidecode import unidecode
 				return unidecode(postId)
+			else:
+				return postId
 		except ImportError:
+			print 'Transliteration is OFF, unidecode not found'
 			return postId
 		
 	def GenerateResources(self):
