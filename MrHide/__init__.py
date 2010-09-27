@@ -139,16 +139,7 @@ class MrHide(object):
 	def date(self, post, value):
 		post['date'] = datetime.datetime.strptime(value.strip(), '%d.%m.%Y')
 	def tags(self, post, value):
-		try:
-			if self.options.transliterate:
-				from unidecode import unidecode
-				post['tags'] = [ helpers.urllib.quote(unidecode(tag.strip())) for tag in value.split(',') if tag]
-			else:
-				post['tags'] = [ helpers.urllib.quote(tag.strip()) for tag in value.split(',') if tag]
-		except ImportError:
-			print 'Transliteration is OFF, unidecode not found' 
-			post['tags'] = [ helpers.urllib.quote(tag.strip()) for tag in value.split(',') if tag]
-		
+		post['tags'] = [ tag.strip() for tag in value.split(',') if tag]
 	def text(self, post, value):
 		post['text'] = []
 	
@@ -175,15 +166,7 @@ class MrHide(object):
 		for ch in [' ', ',', '.', '!', '?', ';', ':', '/', '-']:
 			if ch in postId:
 				postId = postId.replace(ch, '-')		
-		try:
-			if self.options.transliterate:
-				from unidecode import unidecode
-				return unidecode(postId)
-			else:
-				return postId
-		except ImportError:
-			print 'Transliteration is OFF, unidecode not found'
-			return postId
+		return helpers.tr(postId)
 		
 	def GenerateResources(self):
 		if self.options.skip_resources:
@@ -225,11 +208,13 @@ class MrHide(object):
 		if self.options.skip_tags:
 			return
 		outputTagsFolder = os.path.join(self.options.target, defines.tags)
-		if not os.path.exists(os.path.join(outputTagsFolder, tag.encode('utf-8'), str(pageNumber))):
-			os.makedirs(os.path.join(outputTagsFolder, tag.encode('utf-8'), str(pageNumber)))
+		if not os.path.exists(os.path.join(outputTagsFolder, helpers.tr(tag), str(pageNumber))):
+			os.makedirs(os.path.join(outputTagsFolder, helpers.tr(tag), str(pageNumber)))
 		
-		pagePath = os.path.join(outputTagsFolder, tag.encode('utf-8'), str(pageNumber), 'index.html')
-		logging.debug('Generating tag %s page #%d with %d posts: %s' % (tag.encode('utf-8'), pageNumber, len(page), pagePath) )
+		pagePath = os.path.join(outputTagsFolder, helpers.tr(tag), str(pageNumber), 'index.html')
+		logging.debug('Generating tag %s page #%d with %d posts: %s' % ( 
+				helpers.tr(tag), pageNumber, 
+				len(page), pagePath) )
 		self._GeneratePage(pagePath, pageNumber, totalPages, page, filters = {'tag' : tag})
 			
 	def _GeneratePage(self, pagePath, pageNumber, totalPages, page, filters = {}):
@@ -258,8 +243,8 @@ class MrHide(object):
 		
 		#create '/tag/%name' -> '/tag/%name/1' handler
 		for tag in tags:
-			src = os.path.join(outputTagsFolder, '%s/1/index.html' % tag.encode('utf-8'))
-			dst = os.path.join(outputTagsFolder, '%s/index.html' % tag.encode('utf-8'))
+			src = os.path.join(outputTagsFolder, '%s/1/index.html' % helpers.tr(tag))
+			dst = os.path.join(outputTagsFolder, '%s/index.html' % helpers.tr(tag))
 			logging.debug('Copy %s %s' % (src, dst))
 			os.system('cp %s %s' % (src, dst) )
 			
@@ -314,11 +299,11 @@ class MrHide(object):
 		
 		#Tag feeds
 		for tag in tags.keys():
-			tagFeedPath = os.path.join(outputTagsFolder, tag, 'feed.rss')
+			tagFeedPath = os.path.join(outputTagsFolder, helpers.tr(tag), 'feed.rss')
 			postsWithTag = tags[tag]
 			tagTitle = 'Posts of %s with tag %s' % (self.options.title, tag)
 			tagDesc = 'Last %d posts of %s with tag %s' % ( len(postsWithTag), self.options.title, tag)
-			self._GenerateFeed(tagFeedPath, self.options.webroot + '/tag/%s' % tag, postSizes, postsWithTag, tagTitle, tagDesc)
+			self._GenerateFeed(tagFeedPath, self.options.webroot + '/tag/%s' % helpers.tr(tag), postSizes, postsWithTag, tagTitle, tagDesc)
 			
 	def GenerateSiteMap(self, posts, tags, pages):
 		if self.options.skip_sitemap:

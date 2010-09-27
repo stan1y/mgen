@@ -22,10 +22,32 @@ from xml.dom.minidom import parseString as parseXmlString
 #website root path setup by MrHide.__init__()
 webroot = '/'
 
+def tr(text):
+	try:
+		from  unidecode import unidecode
+		text = str(unidecode(text))
+		return text.replace('\'', '').replace('"', '')
+	except ImportError:
+		print 'Your text %s has unicode, it can lead to certain problems...' % text
+	return text
+
 def link(linkPath):
 	if linkPath.startswith('/'):
 		linkPath = linkPath[1:]
-	return os.path.join(webroot, linkPath)
+	#link should be ascii compatible
+	hasUnicode = False
+	try:
+		strLine = str(linkPath)
+	except UnicodeEncodeError:
+		hasUnicode = True
+	
+	if hasUnicode:
+		linkPath = tr(linkPath)
+	
+	linkPath = urllib.quote( os.path.join(webroot, linkPath) )	
+	print 'LINK', linkPath
+	return linkPath
+	
 
 def resource(resourcePath):
 	if resourcePath.startswith('/'):
