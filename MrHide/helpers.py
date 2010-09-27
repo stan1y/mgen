@@ -45,7 +45,6 @@ def link(linkPath):
 		linkPath = tr(linkPath)
 	
 	linkPath = urllib.quote( os.path.join(webroot, linkPath) )	
-	print 'LINK', linkPath
 	return linkPath
 	
 
