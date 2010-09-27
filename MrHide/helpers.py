@@ -15,28 +15,12 @@ import logging
 import defines
 import markdown
 import string
+import logging
+from texthlp import cut
 from xml.dom.minidom import parseString as parseXmlString
 
 #website root path setup by MrHide.__init__()
 webroot = '/'
-
-def shoudBreak(text):
-	return (text in string.whitespace) or (text in ['.', '!', '?', ',', ';'])
-
-def cut(text, lenght):
-	#too small
-	if len(text) <= lenght:
-		return text
-	
-	if shoudBreak(text[lenght - 1]):
-		return text[:lenght - 1]
-	else:
-		for index in reversed(range(0, lenght - 1)):
-			if shoudBreak(text[index]):
-				return text[:index]
-				
-		#no sutable place found, return all
-		return text
 
 def link(linkPath):
 	if linkPath.startswith('/'):
