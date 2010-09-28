@@ -7,6 +7,7 @@
 import os
 import sys
 import logging
+import datetime
 import optparse
 import MrHide
 
@@ -23,7 +24,9 @@ if __name__ == '__main__':
 	parser.add_option("--posts", help = "Number of posts per page. Default is 10.", default = 10)
 	parser.add_option("--items", help = "Number of items per rss feed. Default is 50.", default = 30)
 	parser.add_option("--title", help = "Title your of generated rss feeds. Default is capitalized source folder name.")
+	parser.add_option("--years", help = "Values list separated by comma for inital years filter. Default is current year only")
 	parser.add_option("--lang", help = "Language of your site. Default is 'en'", default = 'en')
+	parser.add_option("--use24hours", help = "All time values are read and written with format '%%H:%%M', otherwise as '%%I:%%M %%p. Default is True.' ", action="store_true", default=True)
 	parser.add_option("--cut-at", help = "A size of description text of rss feed item, extracted from post content.", default = 100)
 	parser.add_option("--transliterate", action="store_true", help = "Convert unicode in post id to transliterated version. Requries 'unidecode'", default = True)
 	
@@ -42,6 +45,11 @@ if __name__ == '__main__':
 	#logging configuration
 	if options.debug:
 		print 'DEBUG mode is ON'
+		
+	if options.years:
+		optoins.years = [int(y.strip()) for y in options.years.split(',')]
+	else:
+		options.years = [ datetime.datetime.now().year ]
 	
 	if options.source and os.path.exists(options.source) and options.target and options.url:
 		if os.path.exists(options.target) and options.clear:
