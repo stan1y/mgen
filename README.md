@@ -71,8 +71,10 @@ Template for a single page with posts.
 
 Template for blog index page with summary of posts & tags.
 
-- _list_ *posts* - All posts
-- _list_ *tags* - All tags
+- _list_ __posts__ - All posts
+- _list_ __tags__ - All tags
+- _dict_ __dates__ - Posts in year/month/day dicts
+- _list_ __monthsByPosts__ - List of months with posts
 
 The structure of expected _source_ folder:
     MyBlog
@@ -99,7 +101,9 @@ The generated html, resources, rss feeds layout.
 - /index.html
 - /page/[num]/index.html
 - /post/index.html -> /post/1/index.html
-- /post/[id]/index.html
+- /post/id/[id]/index.html
+- /post/date/[year]/[month]/[day]/index.html
+- /post/date/[year]/[month]/index.html ( index is generated for each __monthsByPosts__ argument in _index.mako_ )
 - /post/feed.rss
 - /tag/[name]/[pageNumber]/index.html
 - /tag/[name]/index.html -> /tag/[name]/1/index.html
@@ -133,34 +137,11 @@ pageTemplate = 'page.mako' _name of template for single page_
 indexTemplate = 'index.mako' _name of template for summary page_
 
 ## Usage ###
-    Usage: mrhide.py [options]
-    Options:
-      -h, --help            show this help message and exit
-      --debug               Enable debug outout
-      -s SOURCE, --source=SOURCE
-                            Path to blog posts
-      -t TARGET, --target=TARGET
-                            Path where to put results
-      -u URL, --url=URL     An external wellformed url to deployed website,
-                            excluding webroot.
-      -r WEBROOT, --webroot=WEBROOT
+Generate a site to _/var/wwwroot/blog_ from posts & markup at _/home/user/mycoolblog_. The _web root_ for content _/blog_ (i.e. /var/wwwroot is **site** root) and public url is http://website.com/. So full path to deployed blog is **http://website.com/blog**
 
-      --posts=POSTS         Number of posts per page. Default is 10.
-      --items=ITEMS         Number of items per rss feed. Default is 50.
-      --title=TITLE         Title your of generated rss feeds. Default is
-                              capitalized source folder name.
-      --lang=LANG           Language of your site. Default is 'en'
-      --cut-at=CUT_AT       A size of description text of rss feed item, extracted
-                              from post content.
-      --transliterate       Convert unicode in post id to transliterated version.
-                              Requries 'unidecode'
-      --clear               Remove target if any.
-      --skip-posts          Do not generate posts.
-      --skip-pages          Do not generate pages.
-      --skip-tags           Do not generate tags.
-      --skip-rss            Do not generate rss feeds.
-      --skip-resources      Do not generate resources & scripts.
-      --skip-indexes        Do not generate index files.
+    mrhide --source /home/user/mycoolblog --target /var/www/root/blog --url http://website.com --webroot /blog
+
+Optionally add `--clear` to remove target before generation and/or `--debug` to enable debug output. Type `mrhide --help` for full list of options.
 
 ##License##
 
