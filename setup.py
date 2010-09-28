@@ -13,7 +13,7 @@ except ImportError:
 
 setup(
 	name='mrhide',
-	version='0.1',
+	version='0.0.3',
 	description='Lightweight Static Blog Generator',
 	author='Stanislav Yudin',
 	author_email='decvar@gmail.com',

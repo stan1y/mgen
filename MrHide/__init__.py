@@ -3,7 +3,7 @@
 # Copyright Stanislav Yudin, 2010
 #
 
-__version__ = '0.2'
+__version__ = '0.0.3'
 
 import sys
 import os
