@@ -74,6 +74,7 @@ rssTemplate = '''# -*- encoding:utf-8 -*-
 #  list posts - All posts
 #  list pages - All pages
 #  dict tags - All tags
+#  list years - options.years
 #  string url - options.url
 #  string webRoot - options.webroot
 siteMapTemplate = '''# -*- encoding:utf-8 -*-
@@ -84,10 +85,26 @@ siteMapTemplate = '''# -*- encoding:utf-8 -*-
 			    http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 	%for post in posts:
 		<url>
-			<loc>${url + webRoot + '/' + post['id']}</loc>
+			<loc>${url + webRoot + '/post/id/' + post['id']}</loc>
 		</url>
 	%endfor
 	
+	%for y in years:
+		%for m in dates[y]:
+			%if dates[y][m]:
+				%for d in dates[y][m]:
+					%if d:
+						%for post in dates[y][m][d]:			
+							<url>
+								<loc>${url + webRoot + '/post/date/%d/%d/%d/index.html' % (y, m, d)}</loc>
+							</url>
+						%endfor
+					%endif
+				%endfor
+			%endif
+		%endfor
+	%endfor
+
 	%for pageIndex in range(1, len(pages)):
 		<url>
 			<loc>${url + webRoot + '/page/' + str(pageIndex)}</loc>
@@ -102,21 +119,6 @@ siteMapTemplate = '''# -*- encoding:utf-8 -*-
 	
 </urlset>
 '''
-
-MonthNames = {
-	1 : 'January',
-	2 : 'February',
-	3 : 'March',
-	4 : 'April',
-	5 : 'May',
-	6 : 'June',
-	7 : 'July',
-	8 : 'August',
-	9 : 'September',
-	10 : 'October',
-	11 : 'November',
-	12 : 'December'
-}
 
 class MrHide(object):
 	def __init__(self, options):
@@ -371,8 +373,9 @@ class MrHide(object):
 			tagTitle = 'Posts of %s with tag %s' % (self.options.title, tag)
 			tagDesc = 'Last %d posts of %s with tag %s' % ( len(postsWithTag), self.options.title, tag)
 			self._GenerateFeed(tagFeedPath, self.options.webroot + '/tag/%s' % helpers.tr(tag), postSizes, postsWithTag, tagTitle, tagDesc)
+		print '  totally %d tag feeds written' % len(tags.keys())
 			
-	def GenerateSiteMap(self, posts, tags, pages):
+	def GenerateSiteMap(self, posts, tags, pages, dates):
 		if self.options.skip_sitemap:
 			return
 			
@@ -387,6 +390,8 @@ class MrHide(object):
 				posts = posts,
 				tags = tags,
 				pages = pages,
+				dates = dates,
+				years = self.options.years,
 				url = self.options.url,
 				webRoot = self.options.webroot
 			).encode('utf-8', 'replace'))
@@ -420,7 +425,7 @@ class MrHide(object):
 			#append to date dicts
 			dates[post['date'].year][post['date'].month][post['date'].day][post['id']] = post
 			self.GeneratePost(post)
-		print '  total %d posts written' % len(posts)
+		print '  totaly %d posts written' % len(posts)
 		#Sort posts by date
 		posts.sort()
 		posts.reverse()
@@ -438,14 +443,12 @@ class MrHide(object):
 				pages[pageNumber] = []
 			pages[pageNumber].append(post)
 			postIndex += 1
-		
-		print 'Generating %d pages' % len(pages)
+			
 		for pageNumber in pages:
 			self.GeneratePage(pageNumber, len(pages), pages[pageNumber])
-		
+		print '  totally %d pages written' % len(pages)
 		#Process posts & build pages for tags		
 		for tag in tags:
-			print 'Processing tag %s' % tag.encode('utf-8')
 			postsWithTag = tags[tag]
 			
 			#Sort posts with tag by date
@@ -469,29 +472,31 @@ class MrHide(object):
 		#Generate dates
 		print 'Generating dates'
 		outputPostsFolder = os.path.join(self.options.target, defines.posts)
+		totalDatePages = 0
 		for y in self.options.years:
 			for m in range(1, 12):
 				postsByMonth = []
 				
 				#Generate pages for days
 				for d in range(1, 31):
-					if dates[y][m][d]:
-						
+					postByDay = dates[y][m][d]
+					if postByDay:
 						#append to month posts
-						[postsByMonth.append(p) for p in dates[y][m][d]]
-						print 'Generating Page with %d post(s) on %d %s %d' % (len(dates[y][m][d]), d, __MonthNames[m], y)
+						[postsByMonth.append(p) for p in postByDay]
 						postsByDayPath = os.path.join(outputPostsFolder, 'date', str(y), str(m), str(d), 'index.html')
-						self._GeneratePage(postsByDayPath, 1, 1, dates[y][m][d])
+						self._GeneratePage(postsByDayPath, 1, 1, postByDay, filters = {'year' : y, 'month': m, 'day': d})
+						totalDatePages += 1
 						
 				#Generate page for month
-				print 'Generating page with %d post(s) for %s %d' % (len(postsByMonth), MonthNames[m], y)
-				postsByMonthPath = os.path.join(outputPostsFolder, 'date', str(y), str(m), 'index.html')
-				self._GeneratePage(postsByMonthPath, 1, 1, postsByMonth)
-				
-			
+				if postsByMonth:
+					postsByMonthPath = os.path.join(outputPostsFolder, 'date', str(y), str(m), 'index.html')
+					self._GeneratePage(postsByMonthPath, 1, 1, postsByMonth, filters = {'year' : y, 'month': m})				
+					totalDatePages +=1
+		print '  totally %d date pages written' % totalDatePages
+		
 		self.GenerateResources()
 		self.GenerateIndexes([tag for tag in tags], posts, pages)
 		self.GenerateFeeds(posts, tags)
-		self.GenerateSiteMap(posts, tags, pages)
+		self.GenerateSiteMap(posts, tags, pages, dates)
 		
 		print 'Done.'
