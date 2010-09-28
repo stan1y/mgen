@@ -296,7 +296,7 @@ class MrHide(object):
 					totalPages = totalPages, 
 					page = page) )
 		
-	def GenerateIndexes(self, tags, posts, pages):
+	def GenerateIndexes(self, tags, posts, pages, dates, monthsByPosts):
 		if self.options.skip_indexes:
 			return
 			
@@ -326,7 +326,10 @@ class MrHide(object):
 					helpers = helpers, 
 					tags = tags, 
 					posts = posts,
-					pages = pages) )
+					pages = pages,
+					dates = dates,
+					years = self.options.years,
+					monthsByPosts = monthsByPosts) )
 					
 	def _GenerateFeed(self, feedPath, webRoot, postSizes, posts, title, desc):
 			logging.debug('Generating feed with %d items: %s' % (len(posts), feedPath) )
@@ -410,7 +413,7 @@ class MrHide(object):
 			for m in range(1, 12): 
 				dates[y][m] = {}
 				for d in range(1, 32):
-					dates[y][m][d] = {}
+					dates[y][m][d] = []
 		
 		#Parse *.md files and populate posts list
 		print 'Generating post pages'
@@ -423,7 +426,7 @@ class MrHide(object):
 					tags[tag] = []
 				tags[tag].append(post)
 			#append to date dicts
-			dates[post['date'].year][post['date'].month][post['date'].day][post['id']] = post
+			dates[post['date'].year][post['date'].month][post['date'].day].append(post)
 			self.GeneratePost(post)
 		print '  totaly %d posts written' % len(posts)
 		#Sort posts by date
@@ -473,6 +476,7 @@ class MrHide(object):
 		print 'Generating dates'
 		outputPostsFolder = os.path.join(self.options.target, defines.posts)
 		totalDatePages = 0
+		monthsByPosts = []
 		for y in self.options.years:
 			for m in range(1, 12):
 				postsByMonth = []
@@ -489,13 +493,14 @@ class MrHide(object):
 						
 				#Generate page for month
 				if postsByMonth:
+					monthsByPosts.append(m)
 					postsByMonthPath = os.path.join(outputPostsFolder, 'date', str(y), str(m), 'index.html')
 					self._GeneratePage(postsByMonthPath, 1, 1, postsByMonth, filters = {'year' : y, 'month': m})				
 					totalDatePages +=1
 		print '  totally %d date pages written' % totalDatePages
 		
 		self.GenerateResources()
-		self.GenerateIndexes([tag for tag in tags], posts, pages)
+		self.GenerateIndexes([tag for tag in tags], posts, pages, dates, monthsByPosts)
 		self.GenerateFeeds(posts, tags)
 		self.GenerateSiteMap(posts, tags, pages, dates)
 		
