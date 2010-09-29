@@ -354,7 +354,7 @@ class MrHide(object):
 			
 		print 'Generating Feeds'
 		
-		outputPostsFolder = os.path.join(self.options.target, defines.posts, 'id')
+		outputPostsFolder = os.path.join(self.options.target, defines.posts)
 		outputTagsFolder = os.path.join(self.options.target, defines.tags)
 		
 		postSizes = {}
