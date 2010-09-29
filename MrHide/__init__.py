@@ -361,7 +361,7 @@ class MrHide(object):
 		#Get post sizes
 		for postFolder in os.listdir(outputPostsFolder):
 			if os.path.isdir(os.path.join(outputPostsFolder, postFolder)):
-				postSizes[postFolder] = os.path.getsize(os.path.join(outputPostsFolder, postFolder, 'index.html'))
+				postSizes[postFolder] = os.path.getsize(os.path.join(outputPostsFolder, 'id', postFolder, 'index.html'))
 		
 		#Posts feed
 		postsFeedPath = os.path.join(outputPostsFolder, 'feed.rss')
