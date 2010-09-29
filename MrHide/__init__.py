@@ -177,7 +177,7 @@ class MrHide(object):
 			dateFmt = ''
 			
 		if dateFmt:	
-			if ('AM' in value) or ('PM' in value): 
+			if not self.options.use24hours: 
 				timeFmt = ', %I.%M %p'
 			elif ',' in value: 
 				timeFmt = ', %H.%M'

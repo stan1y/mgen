@@ -7,7 +7,16 @@ and contain the following format:
     title : My Post Title
 	date  : 01/12/2010
 	text:
-	[Formated post contents]
+	[Formatted post contents]
+
+The __date__ format is controlled by `--use24hours` options (True by default) and can be one of the following:
+
+- `%d/%m/%Y` _Date only_
+- `%d.%m.%Y`
+- `%d.%m.%Y, %I.%M %p` _Date and time with AM/PM strings_
+- `%d/%m/%Y, %I/%M %p`
+- `%d.%m.%Y, %H.%M` _Date and time in 24 hours format_
+- `%d/%m/%Y, %H/%M`
 
 The post content is read from the next line after _text_ section is found. Text read from section is
 a some sort of *kown* format, with markdown suggested by default but anything like Textile or BBCode can be used.
@@ -119,25 +128,25 @@ Values of expected folders for both source & target layout is controlled by
 
 ### Output settings ###
 
-- resources = 'res' _path to generated resources folder inside target_
-- posts = 'post' _path to generated post inside target_
-- pages = 'page' _path to generated pages inside target_
-- tags = 'tag' _path to generated tags inside target_
+- `resources = 'res'` _path to generated resources folder inside target_
+- `posts = 'post'` _path to generated post inside target_
+- `pages = 'page'` _path to generated pages inside target_
+- `tags = 'tag'` _path to generated tags inside target_
 
 ### Input settings ###
 
-- inResources = 'resources' _path to input resources folder inside source_
-- inPosts = 'posts' _path to input post files inside source_
-- inTemplates = 'templates' _path to input templates inside source_
+- `inResources = 'resources'` _path to input resources folder inside source_
+- `inPosts = 'posts'` _path to input post files inside source_
+- `inTemplates = 'templates'` _path to input templates inside source_
 
 ### Template per category of generated pages ###
 
-postTemplate = 'post.mako' _name of template for single post_
-pageTemplate = 'page.mako' _name of template for single page_
-indexTemplate = 'index.mako' _name of template for summary page_
+- `postTemplate = 'post.mako'` _name of template for single post_
+- `pageTemplate = 'page.mako'` _name of template for single page_
+- `indexTemplate = 'index.mako'` _name of template for summary page_
 
 ## Usage ###
-Generate a site to _/var/wwwroot/blog_ from posts & markup at _/home/user/mycoolblog_. The _web root_ for content _/blog_ (i.e. /var/wwwroot is **site** root) and public url is http://website.com/. So full path to deployed blog is **http://website.com/blog**
+Generate a site to `/var/wwwroot/blog` from posts & markup at `/home/user/mycoolblog`. The __web root__ will be `/blog`. That means that `/var/wwwroot` is your **site http server** root path) and **public url** is `http://website.com/`.The result path of deployed website will be `http://website.com/blog`
 
     mrhide --source /home/user/mycoolblog --target /var/www/root/blog --url http://website.com --webroot /blog
 
