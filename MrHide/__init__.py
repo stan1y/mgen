@@ -354,20 +354,20 @@ class MrHide(object):
 			
 		print 'Generating Feeds'
 		
-		outputPostsFolder = os.path.join(self.options.target, defines.posts)
+		outputPostsFolder = os.path.join(self.options.target, defines.posts, 'id')
 		outputTagsFolder = os.path.join(self.options.target, defines.tags)
 		
 		postSizes = {}
 		#Get post sizes
-		for postFolder in os.listdir(outputPostsFolder):
+		for postFolder in os.listdir(os.path.join(outputPostsFolder)):
 			if os.path.isdir(os.path.join(outputPostsFolder, postFolder)):
-				postSizes[postFolder] = os.path.getsize(os.path.join(outputPostsFolder, 'id', postFolder, 'index.html'))
+				postSizes[postFolder] = os.path.getsize(os.path.join(outputPostsFolder, postFolder, 'index.html'))
 		
 		#Posts feed
-		postsFeedPath = os.path.join(outputPostsFolder, 'feed.rss')
+		postsFeedPath = os.path.join(self.options.target, defines.posts, 'feed.rss')
 		postsTitle = 'Posts of %s' % self.options.title
 		postsDesc = 'Last %d posts of %s' % (self.options.items, self.options.title)
-		self._GenerateFeed(postsFeedPath, self.options.webroot + '/post/id/', postSizes, posts[:self.options.items], postsTitle, postsDesc)
+		self._GenerateFeed(postsFeedPath, self.options.webroot + '/post/id', postSizes, posts[:self.options.items], postsTitle, postsDesc)
 		
 		#Tag feeds
 		for tag in tags.keys():
