@@ -258,8 +258,8 @@ class MrHide(object):
 		with open( os.path.join(postPath, 'index.html'), 'w') as postFile:
 			template = self.templates.get_template(defines.postTemplate)
 			postFile.write( template.render( encoding = 'utf-8', helpers = helpers, post = post) )
-			
-		os.system('cp %s %s' % (os.path.join(postPath, 'index.html'), postByDatePath))
+		
+		os.system('ln -s %s %s' % (os.path.abspath(os.path.join(postPath, 'index.html')), os.path.abspath(postByDatePath)) )
 		
 	def GeneratePage(self, pageNumber, totalPages, page):
 		if self.options.skip_pages:
@@ -308,14 +308,15 @@ class MrHide(object):
 		src = os.path.join(outputPagesFolder, '1/index.html')
 		dst = os.path.join(outputPostsFolder, 'index.html')
 		logging.debug('Link %s -> %s' % (src, dst))
-		os.system('ln -s %s %s' % (src, dst) )
+		os.system('ln -s %s %s' % (os.path.abspath(src), os.path.abspath(dst)) )
 		
 		#create '/tag/%name' -> '/tag/%name/1' handler
 		for tag in tags:
+			logging.debug('Generating index for tag %s' % helpers.tr(tag))
 			src = os.path.join(outputTagsFolder, '%s/1/index.html' % helpers.tr(tag))
 			dst = os.path.join(outputTagsFolder, '%s/index.html' % helpers.tr(tag))
 			logging.debug('Link %s -> %s' % (src, dst))
-			os.system('ln -s %s %s' % (src, dst) )
+			os.system('ln -s %s %s' % (os.path.abspath(src), os.path.abspath(dst)) )
 			
 		#create /index.html with overview
 		logging.debug('Generating index.html')
