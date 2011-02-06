@@ -89,7 +89,7 @@ siteMapTemplate = '''# -*- encoding:utf-8 -*-
 		</url>
 	%endfor
 	
-	%for y in years:
+	%for y in dates:
 		%for m in dates[y]:
 			%if dates[y][m]:
 				%for d in dates[y][m]:
@@ -479,9 +479,10 @@ class MrHide(object):
 		totalDatePages = 0
 		monthsByPosts = []
 		for y in self.options.years:
+			if not y in dates:
+				continue
 			for m in range(1, 12):
 				postsByMonth = []
-				
 				#Generate pages for days
 				for d in range(1, 31):
 					postByDay = dates[y][m][d]

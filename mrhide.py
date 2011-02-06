@@ -47,7 +47,7 @@ if __name__ == '__main__':
 		print 'DEBUG mode is ON'
 		
 	if options.years:
-		optoins.years = [int(y.strip()) for y in options.years.split(',')]
+		options.years = [int(y.strip()) for y in options.years.split(',')]
 	else:
 		options.years = [ datetime.datetime.now().year ]
 	
