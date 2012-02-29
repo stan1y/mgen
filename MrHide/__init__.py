@@ -409,7 +409,7 @@ class MrHide(object):
 		pages = {}
 		tags = {}
 		dates = {}
-		for y in [2009, 2010]:
+		for y in self.options.years:
 			dates[y] = {}
 			for m in range(1, 12): 
 				dates[y][m] = {}

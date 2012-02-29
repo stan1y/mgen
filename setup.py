@@ -22,9 +22,10 @@ setup(
 		"Mako>=0.2.5",
 		"markdown>=2.0"
 	],
-	packages=find_packages(exclude=['ez_setup']),
-	include_package_data=True,
-	test_suite='nose.collector',
-	package_data={'MrHide': ['i18n/*/LC_MESSAGES/*.mo']},
-	zip_safe=False,
+	packages = find_packages(exclude=['ez_setup']),
+	include_package_data = True,
+	test_suite = 'nose.collector',
+	package_data = {'MrHide': ['i18n/*/LC_MESSAGES/*.mo']},
+	zip_safe = True,
+	scripts = ['scripts/mrhide']
 )
