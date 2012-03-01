@@ -259,7 +259,7 @@ class MrHide(object):
 			template = self.templates.get_template(defines.postTemplate)
 			postFile.write( template.render( encoding = 'utf-8', helpers = helpers, post = post) )
 		
-		os.system('ln -s %s %s' % (os.path.abspath(os.path.join(postPath, 'index.html')), os.path.abspath(postByDatePath)) )
+		os.system('cp %s %s' % (os.path.abspath(os.path.join(postPath, 'index.html')), os.path.abspath(postByDatePath)) )
 		
 	def GeneratePage(self, pageNumber, totalPages, page):
 		if self.options.skip_pages:
@@ -353,7 +353,7 @@ class MrHide(object):
 		if self.options.skip_rss:
 			return
 			
-		print 'Generating Feeds'
+		print 'Generating feeds'
 		
 		outputPostsFolder = os.path.join(self.options.target, defines.posts, 'id')
 		outputTagsFolder = os.path.join(self.options.target, defines.tags)
