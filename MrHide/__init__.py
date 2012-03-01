@@ -308,7 +308,7 @@ class MrHide(object):
 		src = os.path.join(outputPagesFolder, '1/index.html')
 		dst = os.path.join(outputPostsFolder, 'index.html')
 		logging.debug('Link %s -> %s' % (src, dst))
-		os.system('ln -s %s %s' % (os.path.abspath(src), os.path.abspath(dst)) )
+		os.system('cp %s %s' % (os.path.abspath(src), os.path.abspath(dst)) )
 		
 		#create '/tag/%name' -> '/tag/%name/1' handler
 		for tag in tags:
@@ -316,7 +316,7 @@ class MrHide(object):
 			src = os.path.join(outputTagsFolder, '%s/1/index.html' % helpers.tr(tag))
 			dst = os.path.join(outputTagsFolder, '%s/index.html' % helpers.tr(tag))
 			logging.debug('Link %s -> %s' % (src, dst))
-			os.system('ln -s %s %s' % (os.path.abspath(src), os.path.abspath(dst)) )
+			os.system('cp %s %s' % (os.path.abspath(src), os.path.abspath(dst)) )
 			
 		#create /index.html with overview
 		logging.debug('Generating index.html')
