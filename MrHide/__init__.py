@@ -477,10 +477,11 @@ class MrHide(object):
 		print 'Generating dates'
 		outputPostsFolder = os.path.join(self.options.target, defines.posts)
 		totalDatePages = 0
-		monthsByPosts = []
+		monthsByPosts = {}
 		for y in self.options.years:
 			if not y in dates:
 				continue
+			monthsByPosts[y] = []
 			for m in range(1, 12):
 				postsByMonth = []
 				#Generate pages for days
@@ -495,7 +496,7 @@ class MrHide(object):
 						
 				#Generate page for month
 				if postsByMonth:
-					monthsByPosts.append(m)
+					monthsByPosts[y].append(m)
 					postsByMonthPath = os.path.join(outputPostsFolder, 'date', str(y), str(m), 'index.html')
 					self._GeneratePage(postsByMonthPath, 1, 1, postsByMonth, filters = {'year' : y, 'month': m})				
 					totalDatePages +=1
