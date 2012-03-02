@@ -56,12 +56,9 @@ rssTemplate = '''# -*- encoding:utf-8 -*-
 			<% postSize = postSizes[post['id']] %>
 			<item>
 				<title>${post['title']}</title>
-				<pubDate>${post['date'].isoformat()}</pubDate>
+				<pubDate>${post['date'].strftime('%a, %d %B %Y')}</pubDate>
 				<description>${helpers.cgi.escape(helpers.markdown.markdown(helpers.cut(''.join(post['text']), cut_at)))}</description>
-				<enclosure
-					url="${url + webRoot + '/' + post['id']}"
-					type="text/html"
-					length="${postSize}" />
+				<link>${url + webRoot + '/' + post['id']}</link>
 			</item>
 		%endfor
    </channel>
