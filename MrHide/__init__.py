@@ -40,7 +40,6 @@ class Post(dict):
 #  list posts
 # Arguments for item rendering:
 #  helpers & os modules
-#  int cut_at - options.cut_at
 #  string webRoot - options.webroot
 #  dict postSizes - dictioanry with size of each post html, key is post['id']
 
@@ -57,7 +56,7 @@ rssTemplate = '''# -*- encoding:utf-8 -*-
 			<item>
 				<title>${post['title']}</title>
 				<pubDate>${post['date'].strftime('%a, %d %B %Y')}</pubDate>
-				<description>${helpers.cgi.escape(helpers.markdown.markdown(helpers.cut(''.join(post['text']), cut_at)))}</description>
+				<description>${helpers.cgi.escape(helpers.markdown.markdown(''.join(post['text'])))}</description>
 				<link>${url + webRoot + '/' + post['id']}</link>
 			</item>
 		%endfor
@@ -341,7 +340,6 @@ class MrHide(object):
 					lang = self.options.lang,
 					posts = posts,
 					helpers = helpers,
-					cut_at = self.options.cut_at,
 					webRoot = webRoot,
 					os = os,
 					postSizes = postSizes).encode('utf-8', 'replace'))

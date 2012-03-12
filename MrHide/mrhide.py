@@ -27,7 +27,6 @@ if __name__ == '__main__':
 	parser.add_option("--years", help = "Values list separated by comma for inital years filter. Default is current year only")
 	parser.add_option("--lang", help = "Language of your site. Default is 'en'", default = 'en')
 	parser.add_option("--use24hours", help = "All time values are read and written with format '%%H:%%M', otherwise as '%%I:%%M %%p. Default is True.' ", action="store_true", default=True)
-	parser.add_option("--cut-at", help = "A size of description text of rss feed item, extracted from post content.", default = 100)
 	parser.add_option("--transliterate", action="store_true", help = "Convert unicode in post id to transliterated version. Requries 'unidecode'", default = True)
 	
 	parser.add_option("--clear", action="store_true", default=False, help="Remove target if any.")
