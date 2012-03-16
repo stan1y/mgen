@@ -1,6 +1,6 @@
 #
 # Mr. Hide Site Genetator
-# Copyright Stanislav Yudin, 2010
+# Copyright Stanislav Yudin, 2010-2012
 #
 
 # Output folders per category of generated content
@@ -14,7 +14,10 @@ inResources = 'resources'
 inPosts = 'posts'
 inTemplates = 'templates'
 
+# Input misc pages folder
+inPages = 'pages'
+
 # Template per category of generated static page
-postTemplate = 'post.mako'
-pageTemplate = 'page.mako'
-indexTemplate = 'index.mako'
+postTemplate = 'post.html'
+blogPageTemplate = 'page.html'
+indexTemplate = 'index.html'

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # Mr. Hide Site Genetator
-# Copyright Stanislav Yudin, 2010
+# Copyright Stanislav Yudin, 2010-2012
 #
 
 import os
@@ -19,6 +19,7 @@ if __name__ == '__main__':
 	parser.add_option("--debug", action="store_true", default=False, help="Enable debug output.")
 	parser.add_option("-s", "--source", help = "Path to your blog source.")
 	parser.add_option("-t", "--target", help = "Path for output.")
+	parser.add_option("-n", "--name", help = "Website name")
 	parser.add_option("-u", "--url", help = "An external wellformed url to deployed website, excluding webroot. Default is 'localhost'", default = 'localhost')
 	parser.add_option("-r", "--webroot", help = "Root path of deployed website. Used for links & resources. Default is '/'", default = "/")
 	parser.add_option("--posts", help = "Number of posts per page. Default is 10.", default = 10)
@@ -38,6 +39,7 @@ if __name__ == '__main__':
 	parser.add_option("--skip-resources", action="store_true", default=False, help="Do not generate resources & scripts.")
 	parser.add_option("--skip-indexes", action="store_true", default=False, help="Do not generate index files.")
 	parser.add_option("--skip-sitemap", action="store_true", default=False, help="Do not generate blog site map.")
+	parser.add_option("--skip-misc", action="store_true", default=False, help="Do not misc pages.")
 	
 	(options, args) = parser.parse_args()
 
