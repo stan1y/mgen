@@ -445,7 +445,7 @@ class MrHide(object):
         },
         #index
         {
-            'url': os.path.join(self.options.webroot, 'index.html'),
+            'url': os.path.join(self.options.webroot),
             'static_files': os.path.join(self.options.webroot, 'index.html'),
             'upload': '.*'
         },
