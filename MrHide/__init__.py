@@ -10,6 +10,7 @@ import os
 import urllib
 import logging
 import datetime
+import yaml
 
 from mako.template import Template
 from mako.lookup import TemplateLookup
@@ -114,6 +115,12 @@ siteMapTemplate = '''# -*- encoding:utf-8 -*-
         </url>
     %endfor
     
+    %for page in miscPages:
+        <url>
+            <loc>${options.url + options.webroot + page}</loc>
+        </url>
+    %endfor
+    
 </urlset>
 '''
 
@@ -146,6 +153,7 @@ class MrHide(object):
         
         self.tagsMap = {}
         self.pagesMap = {}
+        self.miscPages = []
         self.templates = TemplateLookup(directories=[ os.path.join(self.options.source, defines.inTemplates) ],
                                         output_encoding='utf-8',
                                         encoding_errors='replace')
@@ -392,15 +400,17 @@ class MrHide(object):
                 posts = posts,
                 tags = tags,
                 pages = pages,
+                miscPages = self.miscPages,
                 dates = dates
             ).encode('utf-8', 'replace'))
     
     def GeneratePage(self, pageFileTemplatePath):
-        pageFileOutFolder = os.path.join(self.options.target, 
-            os.path.splitext(os.path.basename(pageFileTemplatePath))[0])
+        pageUrl = os.path.splitext(os.path.basename(pageFileTemplatePath))[0]
+        pageFileOutFolder = os.path.join(self.options.target, pageUrl)
         os.makedirs(pageFileOutFolder)
         with open(pageFileTemplatePath, 'r') as templateFile:
             tmpl = Template(templateFile.read(), lookup = self.templates)
+            self.miscPages.append(pageUrl)
             with open(os.path.join(pageFileOutFolder, 'index.html'), 'w') as pageFile:
                 pageFile.write(self.RenderTemplate(tmpl).encode('utf-8', 'replace'))
     
@@ -416,7 +426,92 @@ class MrHide(object):
             self.GeneratePage(os.path.join(pagesFolder, pageFile))
             total_pages += 1
         print '    totaly %d pages written' % total_pages
+    
+    def GenerateAppEngineSite(self):
+        print 'Generating AppEngine site'
+        sitePath = os.path.join(self.options.target, 'site.yaml')
+        logging.debug('Generating AppEngine site')
+        handlers = [
+        #favicon
+        {
+            'url': os.path.join(self.options.webroot, 'favicon.ico'),
+            'static_files': os.path.join(self.options.webroot, 'favicon.ico'),
+            'upload': '.*'
+        },
+        #resources
+        {
+            'url': os.path.join(self.options.webroot, defines.resources),
+            'static_dir': os.path.join(self.options.webroot, defines.resources)
+        },
+        #index
+        {
+            'url': os.path.join(self.options.webroot, 'index.html'),
+            'static_files': os.path.join(self.options.webroot, 'index.html'),
+            'upload': '.*'
+        },
+        #404 page
+        {
+            'url': os.path.join(self.options.webroot, '404'),
+            'static_files': os.path.join(self.options.webroot, '404/index.html'),
+            'upload': '.*'
+        },
+        #all posts
+        {
+            'url': os.path.join(self.options.webroot, 'post'),
+            'static_files': os.path.join(self.options.webroot, defines.posts, 'index.html'),
+            'upload': '.*'
+        },
+        #posts by id
+        {
+            'url': os.path.join(self.options.webroot, defines.posts, 'id/(.*?)'),
+            'static_files': os.path.join(self.options.webroot,defines.posts, 'id/\\1/index.html'),
+            'upload': os.path.join(self.options.webroot,defines.posts, 'id/(.*?)/index.html')
+        },
+        #posts by date
+        {
+            'url': os.path.join(self.options.webroot, defines.posts, 'date/(.*?)'),
+            'static_files': os.path.join(self.options.webroot, defines.posts, 'date/\\1/index.html'),
+            'upload': os.path.join(self.options.webroot, defines.posts, 'date/(.*?)/index.html')
+            
+        },
+        #posts by page
+        {
+            'url': os.path.join(self.options.webroot, defines.pages, '(.*?)'),
+            'static_files': os.path.join(self.options.webroot, defines.pages, '\\1/index.html'),
+            'upload': os.path.join(self.options.webroot, defines.pages, '(.*?)/index.html')
+        },
+        #posts by tag
+        {
+            'url': os.path.join(self.options.webroot, defines.tags, '(.*?)'),
+            'static_files': os.path.join(self.options.webroot, defines.tags, '\\1/1/index.html'),
+            'upload': os.path.join(self.options.webroot, defines.tags, '(.*?)/1/index.html')
+        },
+        #rss feed
+        {
+            'url': os.path.join(self.options.webroot, defines.posts, 'feed.rss'),
+            'static_files': os.path.join(self.options.webroot, defines.posts, 'feed.rss'),
+            'upload': '.*'
+        },
+        #download
+        {
+            'url': '/download',
+            'static_dir': 'download'
+        } ]
+        #page handlers
+        for pageUrl in self.miscPages:
+            handlers.append({
+                'url': os.path.join(self.options.webroot, pageUrl),
+                'static_files': os.path.join(self.options.webroot, pageUrl, 'index.html'),
+                'upload': '.*'
+            })
         
+        with open(sitePath, 'w') as siteFile:
+            #Render feed template to file
+            siteFile.write(yaml.dump( {'handlers' : handlers}, 
+                default_flow_style=False,
+                default_style = "'"))
+        
+
     def Generate(self):
         logging.debug('Reading site %s' % self.options.source)
         postsFolder = os.path.join(self.options.source, defines.inPosts)
@@ -523,5 +618,6 @@ class MrHide(object):
         self.GenerateFeeds(posts, tags)
         self.GenerateMiscPages()
         self.GenerateSiteMap(posts, tags, pages, dates)
+        self.GenerateAppEngineSite()
         
         print 'Done.'

@@ -1,8 +1,9 @@
 ## About Mr. Hide##
 
 Mr. Hide is a light weight static web site generator capable for maintaining individual 
-blog with automatic paging, search & tagging of posts. You will have your _source_ folder
-with all css, images and scripts together with _post_files_. A post file must have extension *.md*
+blog with support of pages and tags. It generates posts by year, month, tag with pages, and plain pages.
+Also it generates sitemap, rss feeds and site.yaml for Google App Engine hosting. 
+You will have your _source_ folder with all css, images and scripts together with _post_ files. A post file must have extension *.md*
 and contain the following format:
     title : My Post Title
 	date  : 01/12/2010
@@ -53,7 +54,7 @@ trivial. Should be something like:
     scp -r /var/www/myblog/* me@server.com:/var/www/production/myblog/
     ssh me@server.com sh /etc/init.d/nginx reload
 
-##HTML Pages Generation##
+##Blog Generation##
 
 There are *three* expected templates to be found by generator of html. The
 templates are rendered with the following arguments available at generation time:
@@ -91,6 +92,11 @@ The structure of expected _source_ folder:
     |-resources/*		(Put your css, js, images and other stuff you may need in template markup)
     |-templates/*.mako	(You actual markup files. Index page, Post template & Page template)
 
+##Site Generation##
+
+In order to build misc site pages you need to place templates for each page into _posts_ folder. Each generated page will be places in a separate
+folder with name equal to it's template file name without extension.
+
 ##Helpers##
 
 In order to have links to resources and generated html pages consistent and correct you need to
@@ -106,7 +112,7 @@ to following methods _recommended_ for use:
 
 The generated html, resources, rss feeds layout.
 
-- /blog.sitemap
+- /sitemap.xml
 - /index.html
 - /page/[num]/index.html
 - /post/index.html -> /post/1/index.html
@@ -117,6 +123,9 @@ The generated html, resources, rss feeds layout.
 - /tag/[name]/[pageNumber]/index.html
 - /tag/[name]/index.html -> /tag/[name]/1/index.html
 - /tag/[name]/feed.rss
+- /[misc-page-1]/index.html
+- /[misc-page-2]/index.html
+- /[misc-page-3]/index.html
 
 Static resources for templates used in markup
 - %source/{defines.inResources} -> %target/{defines.resources}
@@ -139,6 +148,8 @@ Values of expected folders for both source & target layout is controlled by
 - `inPosts = 'posts'` _path to input post files inside source_
 - `inTemplates = 'templates'` _path to input templates inside source_
 
+- `inPages = 'pages'` _path to input misc page templates inside source_
+
 ### Template per category of generated pages ###
 
 - `postTemplate = 'post.mako'` _name of template for single post_
@@ -148,7 +159,7 @@ Values of expected folders for both source & target layout is controlled by
 ## Usage ###
 Generate a site to `/var/wwwroot/blog` from posts & markup at `/home/user/mycoolblog`. The __web root__ will be `/blog`. That means that `/var/wwwroot` is your **site http server** root path) and **public url** is `http://website.com/`.The result path of deployed website will be `http://website.com/blog`
 
-    mrhide --source /home/user/mycoolblog --target /var/www/root/blog --url http://website.com --webroot /blog
+    mrhide --source /home/user/mycoolblog --target /var/www/root/blog --url http://website.com --webroot /blog --name MySite
 
 Optionally add `--clear` to remove target before generation and/or `--debug` to enable debug output. Type `mrhide --help` for full list of options.
 
