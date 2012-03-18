@@ -449,12 +449,6 @@ class MrHide(object):
             'static_files': os.path.join(self.options.webroot, 'index.html'),
             'upload': '.*'
         },
-        #404 page
-        {
-            'url': os.path.join(self.options.webroot, '404'),
-            'static_files': os.path.join(self.options.webroot, '404/index.html'),
-            'upload': '.*'
-        },
         #all posts
         {
             'url': os.path.join(self.options.webroot, 'post'),
