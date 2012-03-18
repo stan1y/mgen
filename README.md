@@ -48,6 +48,7 @@ So Basically you store you blog content & media somewhere safe up in clouds, lik
 you want to publish a new post or edit existing or just update your markup, you need to call Mr.Hide to generate html for
 you. Then you sync your changes to remote host or update your local http server for debugging. Automation of it is fairly
 trivial. Should be something like:
+
     #!/bin/bash
     cd src/mysite
     mrhide --source . --target /var/www/myblog --root /myblog
