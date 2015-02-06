@@ -1,9 +1,9 @@
 #
 # Mr. Hide Site Genetator
-# Copyright Stanislav Yudin, 2010-2012
+# Copyright Stanislav Yudin, 2010-2014
 #
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 
 import sys
 import os
@@ -11,6 +11,7 @@ import urllib
 import logging
 import datetime
 import yaml
+import shutil
 
 from mako.template import Template
 from mako.lookup import TemplateLookup
@@ -83,7 +84,7 @@ siteMapTemplate = '''# -*- encoding:utf-8 -*-
                 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
     %for post in posts:
         <url>
-            <loc>${options.url + options.webroot + '/post/id/' + post['id']}</loc>
+            <loc>${ options.url + helpers.urljoin(options.webroot, 'post/id/', post['id']) }</loc>
         </url>
     %endfor
     
@@ -94,7 +95,7 @@ siteMapTemplate = '''# -*- encoding:utf-8 -*-
                     %if d:
                         %for post in dates[y][m][d]:            
                             <url>
-                                <loc>${options.url + options.webroot + '/post/date/%d/%d/%d/index.html' % (y, m, d)}</loc>
+                                <loc>${ options.url + helpers.urljoin(options.webroot, 'post/date/%d/%d/%d/index.html' % (y, m, d)) }</loc>
                             </url>
                         %endfor
                     %endif
@@ -105,24 +106,29 @@ siteMapTemplate = '''# -*- encoding:utf-8 -*-
 
     %for pageIndex in range(1, len(pages)):
         <url>
-            <loc>${options.url + options.webroot + '/page/' + str(pageIndex)}</loc>
+            <loc>${ options.url + helpers.urljoin(options.webroot, 'page', str(pageIndex)) }</loc>
         </url>
     %endfor
     
     %for tag in tags.keys():
         <url>
-            <loc>${options.url + options.webroot + '/tag/' + tag}</loc>
+            <loc>${ options.url + helpers.urljoin(options.webroot, 'tag', tag) }</loc>
         </url>
     %endfor
     
     %for page in miscPages:
         <url>
-            <loc>${options.url + options.webroot + page}</loc>
+            <loc>${ options.url + helpers.urljoin(options.webroot, page) }</loc>
         </url>
     %endfor
     
 </urlset>
 '''
+robotsTemplate ='''user-agent: *
+%for path in disallow_list:
+disallow: ${path}
+%endfor
+''' 
 
 class MrHide(object):
     def __init__(self, options):
@@ -134,22 +140,22 @@ class MrHide(object):
         helpers.webroot = options.webroot
         
         print 'Mr.Hide ver. %s' % __version__
-        print 'Building web blog for:'
-        print ' %s [%s]' % ( options.title, options.url + options.webroot )
-        print 'Source               : %s' % options.source
-        print 'Output               : %s' % options.target
-        print 'Webroot              : %s' % options.webroot
+        print 'Building website for:'
+        print '  %s [%s]' % ( options.title, options.url + options.webroot )
+        print '  Source               : %s' % options.source
+        print '  Output               : %s' % options.target
+        print '  Webroot              : %s' % options.webroot
         print 'Geneator Options'
-        print 'Transliteration      : %s' % yesno( options.transliterate )
-        print 'Use 24 hours         : %s' % yesno( options.use24hours )
-        print 'Years filter         : %s' % ','.join([str(y) for y in options.years])
-        print 'Posts per page       : %d' % options.posts
-        print 'Items per channel    : %d' % options.items
-        print 'Pages                : %s' % yesno( not options.skip_pages)
-        print 'Posts                : %s' % yesno( not options.skip_posts )
-        print 'Pages                : %s' % yesno( not options.skip_pages)
-        print 'Tags                 : %s' % yesno( not options.skip_tags)
-        print 'Resources            : %s' % yesno( not options.skip_tags)
+        print '  Transliteration      : %s' % yesno( options.transliterate )
+        print '  Use 24 hours         : %s' % yesno( options.use24hours )
+        print '  Years filter         : %s' % ','.join([str(y) for y in options.years])
+        print '  Posts per page       : %d' % options.posts
+        print '  Items per channel    : %d' % options.items
+        print '  Pages                : %s' % yesno( not options.skip_pages)
+        print '  Posts                : %s' % yesno( not options.skip_posts )
+        print '  Pages                : %s' % yesno( not options.skip_pages)
+        print '  Tags                 : %s' % yesno( not options.skip_tags)
+        print '  Resources            : %s' % yesno( not options.skip_tags)
         
         self.tagsMap = {}
         self.pagesMap = {}
@@ -158,8 +164,6 @@ class MrHide(object):
                                         output_encoding='utf-8',
                                         encoding_errors='replace')
         
-    #Define how Hide will read with post data
-    allowed_sections = ['title', 'date', 'tags', 'text']
     def title(self, post, value):
         post['title'] = value
         
@@ -191,24 +195,27 @@ class MrHide(object):
         
     def tags(self, post, value):
         post['tags'] = [ tag.strip() for tag in value.split(',') if tag]
-        
-    def text(self, post, value):
-        post['text'] = []
-    
-    def ParsePost(self, filename):
+
+    def parse_post(self, filename):
         logging.debug('Parsing %s' % filename)
         post = Post()
         with open(filename, 'r') as handle:
             lines = handle.readlines()
+            reading_text = False
             for line in lines:
-                line = line.decode('utf-8')
+                line = line.decode('utf-8').strip()
                 if not line: continue
-                name, d, value = [ token.strip() for token in line.partition(':')]
-                if name in self.allowed_sections and hasattr(self, name.encode('utf-8')):
-                    getattr(self, name)(post, value)
-                else:
-                    #found post text line
+                if reading_text:
                     post['text'].append(line)
+                elif line == '---':
+                    reading_text = True
+                    post['text'] = []
+                else:
+                    name, d, value = [ token.strip() for token in line.partition(':')]
+                    if hasattr(self, name.encode('utf-8')):
+                        getattr(self, name)(post, value.encode('utf-8'))
+                    else:
+                        setattr(post, name, value)
                     
         if not 'title' in post.keys():
             print 'Oups, post %s has no title!' % filename
@@ -220,28 +227,25 @@ class MrHide(object):
             print 'Oups, post %s has no date!' % filename
             sys.exit(-1)
 
-        post['id'] = self.PostID(post)
+        post['id'] = self.get_post_id(post)
         return post
         
-    def PostID(self, post):
+    def get_post_id(self, post):
         postId = post['title']
         for ch in [' ', ',', '.', '!', '?', ';', ':', '/', '-']:
             if ch in postId:
                 postId = postId.replace(ch, '-')        
         return helpers.tr(postId)
         
-    def GenerateResources(self):
+    def generate_resources(self):
         if self.options.skip_resources:
             return
             
         outputResourcesFolder = os.path.join(self.options.target, defines.resources)
-        if not os.path.exists(outputResourcesFolder):
-            os.makedirs(outputResourcesFolder)
-        
         print 'Generating resources'
-        os.system('cp -r %s/* %s' % (os.path.join(self.options.source, defines.inResources), outputResourcesFolder) )
+        shutil.copytree(os.path.join(self.options.source, defines.inResources), outputResourcesFolder)
     
-    def RenderTemplate(self, template, *args, **kwargs):
+    def render_template(self, template, *args, **kwargs):
         try:
             return template.render(
                 encoding = 'utf-8',
@@ -254,7 +258,7 @@ class MrHide(object):
             print exceptions.text_error_template().render()
             sys.exit(1)
     
-    def GeneratePost(self, post):
+    def generate_post(self, post):
         if self.options.skip_posts:
             return
         outputPostsFolder = os.path.join(self.options.target, defines.posts)
@@ -272,10 +276,10 @@ class MrHide(object):
         logging.debug('Generating post: %s' % os.path.join(postPath, 'index.html'))
         with open( os.path.join(postPath, 'index.html'), 'w') as postFile:
             template = self.templates.get_template(defines.postTemplate)
-            postFile.write(self.RenderTemplate(template, post = post))        
-        os.system('cp %s %s' % (os.path.abspath(os.path.join(postPath, 'index.html')), os.path.abspath(postByDatePath)) )
+            postFile.write(self.render_template(template, post = post))
+        shutil.copy2(os.path.abspath(os.path.join(postPath, 'index.html')), os.path.abspath(postByDatePath))
         
-    def GenerateBlogPage(self, pageNumber, totalPages, page):
+    def generate_blog_page(self, pageNumber, totalPages, page):
         if self.options.skip_pages:
             return
             
@@ -285,31 +289,41 @@ class MrHide(object):
             
         pagePath = os.path.join(outputPagesFolder, str(pageNumber), 'index.html')
         logging.debug('Generating page #%d with %d posts: %s' % (pageNumber, len(page), pagePath) )
-        self._GenerateBlogPage(pagePath, pageNumber, totalPages, page, filters = {})
+        self._generate_blog_page(pagePath, pageNumber, totalPages, page, filters = {})
         
-    def GeneragteTagPage(self, pageNumber, totalPages, page, tag):
+    def generate_tag_page(self, pageNumber, totalPages, page, tag):
         if self.options.skip_tags:
             return
         outputTagsFolder = os.path.join(self.options.target, defines.tags)
         if not os.path.exists(os.path.join(outputTagsFolder, helpers.tr(tag), str(pageNumber))):
             os.makedirs(os.path.join(outputTagsFolder, helpers.tr(tag), str(pageNumber)))
         
+        tmpl = defines.blogPageTemplate
+        tag_tmpl = 'tag_%s.html' % tag
+        if os.path.exists( os.path.join(defines.inTemplates, tag_tmpl) ):
+            logging.debug('Using custom page for tag: %s' % tag)
+            tmpl = tag_tmpl
+
         pagePath = os.path.join(outputTagsFolder, helpers.tr(tag), str(pageNumber), 'index.html')
         logging.debug('Generating tag %s page #%d with %d posts: %s' % ( 
                 helpers.tr(tag), pageNumber, 
                 len(page), pagePath) )
-        self._GenerateBlogPage(pagePath, pageNumber, totalPages, page, filters = {'tag' : tag})
+        self._generate_blog_page(pagePath, pageNumber, totalPages, page, 
+            filters = {'tag' : tag},
+            template_file = tmpl)
             
-    def _GenerateBlogPage(self, pagePath, pageNumber, totalPages, page, filters = {}):
+    def _generate_blog_page(self, pagePath, pageNumber, totalPages, page, filters = {}, template_file = defines.blogPageTemplate):
         with open(pagePath, 'w') as pageFile:
-            template = self.templates.get_template(defines.blogPageTemplate)
-            pageFile.write( self.RenderTemplate(template,
+            template = self.templates.get_template(template_file)
+            pageFile.write(
+                self.render_template(template,
                     filters = filters,
                     pageNumber = pageNumber,
                     totalPages = totalPages, 
-                    page = page) )
+                    page = sorted(page))
+            )
         
-    def GenerateIndexes(self, tags, posts, pages, dates, monthsByPosts):
+    def generate_indexes(self, tags, posts, pages, dates, monthsByPosts):
         if self.options.skip_indexes:
             return
             
@@ -320,43 +334,43 @@ class MrHide(object):
         #create '/post/' -> '/pages/1' handler
         src = os.path.join(outputPagesFolder, '1/index.html')
         dst = os.path.join(outputPostsFolder, 'index.html')
-        logging.debug('Link %s -> %s' % (src, dst))
-        os.system('cp %s %s' % (os.path.abspath(src), os.path.abspath(dst)) )
-        
+        if os.path.exists(src):
+            logging.debug('Link %s -> %s' % (src, dst))
+            shutil.copy2(os.path.abspath(src), os.path.abspath(dst))
+            
         #create '/tag/%name' -> '/tag/%name/1' handler
         for tag in tags:
             logging.debug('Generating index for tag %s' % helpers.tr(tag))
             src = os.path.join(outputTagsFolder, '%s/1/index.html' % helpers.tr(tag))
             dst = os.path.join(outputTagsFolder, '%s/index.html' % helpers.tr(tag))
             logging.debug('Link %s -> %s' % (src, dst))
-            os.system('cp %s %s' % (os.path.abspath(src), os.path.abspath(dst)) )
+            shutil.copy2(os.path.abspath(src), os.path.abspath(dst))
             
         #create /index.html with overview
         logging.debug('Generating index.html')
         indexPath = os.path.join(self.options.target, 'index.html')
         with open(indexPath, 'w') as indexFile:
             template = self.templates.get_template(defines.indexTemplate)
-            indexFile.write( self.RenderTemplate(template,
+            indexFile.write( self.render_template(template,
                     tags = tags, 
                     posts = posts,
                     pages = pages,
                     dates = dates,
                     monthsByPosts = monthsByPosts) )
-
                     
-    def _GenerateFeed(self, feedPath, feedRoot, postSizes, posts, title, desc):
-            logging.debug('Generating feed with %d items: %s' % (len(posts), feedPath) )
-            feedTemplate = Template(rssTemplate)
-            with open(feedPath, 'w') as feedFile:
-                feedFile.write(self.RenderTemplate(feedTemplate,
-                    title = title,
-                    feedRoot = feedRoot,
-                    desc = desc,
-                    posts = posts,
-                    os = os,
-                    postSizes = postSizes).encode('utf-8', 'replace'))
+    def _generate_feed(self, feedPath, feedRoot, postSizes, posts, title, desc):
+        logging.debug('Generating feed with %d items: %s' % (len(posts), feedPath) )
+        feedTemplate = Template(rssTemplate)
+        with open(feedPath, 'w') as feedFile:
+            feedFile.write(self.render_template(feedTemplate,
+                title = title,
+                feedRoot = feedRoot,
+                desc = desc,
+                posts = posts,
+                os = os,
+                postSizes = postSizes).encode('utf-8', 'replace'))
     
-    def GenerateFeeds(self, posts, tags):
+    def generate_feeds(self, posts, tags):
         if self.options.skip_rss:
             return
             
@@ -365,38 +379,45 @@ class MrHide(object):
         outputPostsFolder = os.path.join(self.options.target, defines.posts, 'id')
         outputTagsFolder = os.path.join(self.options.target, defines.tags)
         
-        postSizes = {}
-        #Get post sizes
-        for postFolder in os.listdir(os.path.join(outputPostsFolder)):
-            if os.path.isdir(os.path.join(outputPostsFolder, postFolder)):
-                postSizes[postFolder] = os.path.getsize(os.path.join(outputPostsFolder, postFolder, 'index.html'))
-        
-        #Posts feed
-        postsFeedPath = os.path.join(self.options.target, defines.posts, 'feed.rss')
-        postsTitle = 'Posts of %s' % self.options.title
-        postsDesc = 'Last %d posts of %s' % (self.options.items, self.options.title)
-        self._GenerateFeed(postsFeedPath, self.options.webroot + '/post/id', postSizes, posts[:self.options.items], postsTitle, postsDesc)
+        if os.path.exists(outputPostsFolder):
+            postSizes = {}
+            #Get post sizes
+            for postFolder in os.listdir(outputPostsFolder):
+                if os.path.isdir(os.path.join(outputPostsFolder, postFolder)):
+                    postSizes[postFolder] = os.path.getsize(os.path.join(outputPostsFolder, postFolder, 'index.html'))
+            
+            #Posts feed
+            postsFeedPath = os.path.join(self.options.target, defines.posts, 'feed.rss')
+            postsTitle = 'Posts of %s' % self.options.title
+            postsDesc = 'Last %d posts of %s' % (self.options.items, self.options.title)
+            self._generate_feed(postsFeedPath, self.options.webroot + '/post/id', postSizes, posts[:self.options.items], postsTitle, postsDesc)
+        else:
+            print '  no posts to process'
         
         #Tag feeds
-        for tag in tags.keys():
-            tagFeedPath = os.path.join(outputTagsFolder, helpers.tr(tag), 'feed.rss')
-            postsWithTag = tags[tag]
-            tagTitle = 'Posts of %s with tag %s' % (self.options.title, tag)
-            tagDesc = 'Last %d posts of %s with tag %s' % ( len(postsWithTag), self.options.title, tag)
-            self._GenerateFeed(tagFeedPath, self.options.webroot + '/tag/%s' % helpers.tr(tag), postSizes, postsWithTag, tagTitle, tagDesc)
-        print '  totally %d tag feeds written' % len(tags.keys())
+        if os.path.exists(outputTagsFolder):
+            for tag in tags.keys():
+                tagFeedPath = os.path.join(outputTagsFolder, helpers.tr(tag), 'feed.rss')
+                postsWithTag = tags[tag]
+                tagTitle = 'Posts of %s with tag %s' % (self.options.title, tag)
+                tagDesc = 'Last %d posts of %s with tag %s' % ( len(postsWithTag), self.options.title, tag)
+                self._generate_feed(tagFeedPath, self.options.webroot + '/tag/%s' % helpers.tr(tag), postSizes, postsWithTag, tagTitle, tagDesc)
+            print '  totally %d tag feeds written' % len(tags.keys())
+        else:
+            print '  no tags to process'
             
-    def GenerateSiteMap(self, posts, tags, pages, dates):
+    def generate_sitemap(self, posts, tags, pages, dates):
         if self.options.skip_sitemap:
             return
             
         print 'Generating site map'
         siteMapPath = os.path.join(self.options.target, 'sitemap.xml')
+
         logging.debug('Generating site map with %d post, %d tag pages & %d pages: %s' % ( len(posts), len(tags), len(pages), siteMapPath))
         tmpl = Template(siteMapTemplate)
         with open(siteMapPath, 'w') as sitemapFile:
             #Render feed template to file
-            sitemapFile.write(self.RenderTemplate(tmpl,
+            sitemapFile.write(self.render_template(tmpl,
                 posts = posts,
                 tags = tags,
                 pages = pages,
@@ -404,7 +425,7 @@ class MrHide(object):
                 dates = dates
             ).encode('utf-8', 'replace'))
     
-    def GeneratePage(self, pageFileTemplatePath):
+    def generate_page(self, pageFileTemplatePath):
         pageUrl = os.path.splitext(os.path.basename(pageFileTemplatePath))[0]
         pageFileOutFolder = os.path.join(self.options.target, pageUrl)
         os.makedirs(pageFileOutFolder)
@@ -412,22 +433,28 @@ class MrHide(object):
             tmpl = Template(templateFile.read(), lookup = self.templates)
             self.miscPages.append(pageUrl)
             with open(os.path.join(pageFileOutFolder, 'index.html'), 'w') as pageFile:
-                pageFile.write(self.RenderTemplate(tmpl).encode('utf-8', 'replace'))
+                pageFile.write(self.render_template(tmpl).encode('utf-8', 'replace'))
     
-    def GenerateMiscPages(self):
+    def generate_misc(self):
         if self.options.skip_misc:
             return
         
         print 'Generating misc pages'
         pagesFolder = os.path.join(self.options.source, defines.inPages)
+        if not os.path.exists(pagesFolder):
+            print '  nothing to do'
+            return
         total_pages = 0
         for pageFile in [p for p in os.listdir(pagesFolder) if p.endswith('.html')]:
             print ' - %s' % pageFile
-            self.GeneratePage(os.path.join(pagesFolder, pageFile))
+            self.generate_page(os.path.join(pagesFolder, pageFile))
             total_pages += 1
         print '    totaly %d pages written' % total_pages
     
-    def GenerateAppEngineSite(self):
+    def generate_app_engine_site(self):
+        if self.options.skip_gae:
+            return
+
         print 'Generating AppEngine site'
         sitePath = os.path.join(self.options.target, 'site.yaml')
         logging.debug('Generating AppEngine site')
@@ -436,6 +463,12 @@ class MrHide(object):
         {
             'url': os.path.join(self.options.webroot, 'favicon.ico'),
             'static_files': os.path.join(self.options.webroot, 'favicon.ico'),
+            'upload': '.*'
+        },
+        #custom 404.html handler
+        {
+            'url': os.path.join(self.options.webroot, '404.html'),
+            'static_files': os.path.join(self.options.webroot, '404/index.html'),
             'upload': '.*'
         },
         #resources
@@ -504,9 +537,24 @@ class MrHide(object):
             siteFile.write(yaml.dump( {'handlers' : handlers}, 
                 default_flow_style=False,
                 default_style = "'"))
-        
+    
+    def generate_robots_txt(self):
+        if self.options.skip_robots:
+            return
 
-    def Generate(self):
+        print 'Generating robots.txt'
+        robotsPath = os.path.join(self.options.target, 'robots.txt')
+        disallow_list = []
+        if self.options.robots_disallow:
+            disallow_list = [i.strip() for i in self.options.robots_disallow.split(',')]
+
+        tmpl = Template(robotsTemplate)
+        with open(robotsPath, 'w') as robotsFile:
+            robotsFile.write(self.render_template(tmpl,
+                disallow_list = disallow_list,
+            ).encode('utf-8', 'replace'))
+
+    def generate(self):
         logging.debug('Reading site %s' % self.options.source)
         postsFolder = os.path.join(self.options.source, defines.inPosts)
         
@@ -516,7 +564,7 @@ class MrHide(object):
         dates = {}
         for y in self.options.years:
             dates[y] = {}
-            for m in range(1, 12): 
+            for m in range(1, 13): 
                 dates[y][m] = {}
                 for d in range(1, 32):
                     dates[y][m][d] = []
@@ -524,7 +572,7 @@ class MrHide(object):
         #Parse *.md files and populate posts list
         print 'Generating posts'
         for postFile in [p for p in os.listdir(postsFolder) if p.endswith('.md')]:
-            post = self.ParsePost(os.path.join(postsFolder, postFile))
+            post = self.parse_post(os.path.join(postsFolder, postFile))
             posts.append(post)
             #append to tags
             for tag in post['tags']:
@@ -533,7 +581,7 @@ class MrHide(object):
                 tags[tag].append(post)
             #append to date dicts
             dates[post['date'].year][post['date'].month][post['date'].day].append(post)
-            self.GeneratePost(post)
+            self.generate_post(post)
         print '  totaly %d posts written' % len(posts)
         #Sort posts by date
         posts.sort()
@@ -554,7 +602,7 @@ class MrHide(object):
             postIndex += 1
             
         for pageNumber in pages:
-            self.GenerateBlogPage(pageNumber, len(pages), pages[pageNumber])
+            self.generate_blog_page(pageNumber, len(pages), pages[pageNumber])
         print '  totally %d pages written' % len(pages)
         #Process posts & build pages for tags        
         for tag in tags:
@@ -572,7 +620,7 @@ class MrHide(object):
             for post in postsWithTag:
                 postPage.append(post)
                 if postIndex == self.options.posts or (postIndex + 1 == len(postsWithTag)):
-                    self.GeneragteTagPage(tagPageNumber, totalPagesWithTag, postPage, tag)
+                    self.generate_tag_page(tagPageNumber, totalPagesWithTag, postPage, tag)
                     postPage = []
                     tagPageNumber += 1
                     
@@ -596,22 +644,23 @@ class MrHide(object):
                         #append to month posts
                         [postsByMonth.append(p) for p in postByDay]
                         postsByDayPath = os.path.join(outputPostsFolder, 'date', str(y), str(m), str(d), 'index.html')
-                        self._GenerateBlogPage(postsByDayPath, 1, 1, postByDay, filters = {'year' : y, 'month': m, 'day': d})
+                        self._generate_blog_page(postsByDayPath, 1, 1, postByDay, filters = {'year' : y, 'month': m, 'day': d})
                         totalDatePages += 1
                         
                 #Generate page for month
                 if postsByMonth:
                     monthsByPosts[y].append(m)
                     postsByMonthPath = os.path.join(outputPostsFolder, 'date', str(y), str(m), 'index.html')
-                    self._GenerateBlogPage(postsByMonthPath, 1, 1, postsByMonth, filters = {'year' : y, 'month': m})                
+                    self._generate_blog_page(postsByMonthPath, 1, 1, postsByMonth, filters = {'year' : y, 'month': m})                
                     totalDatePages +=1
         print '  totally %d date pages written' % totalDatePages
         
-        self.GenerateResources()
-        self.GenerateIndexes([tag for tag in tags], posts, pages, dates, monthsByPosts)
-        self.GenerateFeeds(posts, tags)
-        self.GenerateMiscPages()
-        self.GenerateSiteMap(posts, tags, pages, dates)
-        self.GenerateAppEngineSite()
+        self.generate_resources()
+        self.generate_indexes([tag for tag in tags], posts, pages, dates, monthsByPosts)
+        self.generate_feeds(posts, tags)
+        self.generate_misc()
+        self.generate_sitemap(posts, tags, pages, dates)
+        self.generate_app_engine_site()
+        self.generate_robots_txt()
         
         print 'Done.'

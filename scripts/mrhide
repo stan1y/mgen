@@ -1,5 +1,2 @@
 #!/bin/bash
-INSTALLED=`python -c "import MrHide
-import os
-print os.path.dirname(MrHide.__file__)"`
-python $INSTALLED/mrhide.py $@
+python -m "MrHide.mrhide" $@

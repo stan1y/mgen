@@ -8,6 +8,7 @@ import sys
 import random
 import datetime
 import base64
+import hashlib
 import cgi
 import urllib
 import urlparse
@@ -16,6 +17,10 @@ import defines
 import markdown
 import string
 import logging
+import BeautifulSoup
+
+from mako import exceptions
+from mako.template import Template
 from texthlp import cut
 from xml.dom.minidom import parseString as parseXmlString
 
@@ -38,6 +43,8 @@ MonthNames = {
 }
 
 def tr(text):
+	if not isinstance(text, unicode):
+		return text
 	try:
 		from  unidecode import unidecode
 		text = str(unidecode(text))
@@ -45,6 +52,9 @@ def tr(text):
 	except ImportError:
 		print 'Your text %s has unicode, it can lead to certain problems...' % text
 	return text
+
+def urljoin(*args):
+	return urllib.quote(os.path.join(*args))
 
 def link(linkPath):
 	if linkPath.startswith('/'):
@@ -70,3 +80,20 @@ def resource(resourcePath):
 
 def format_timestamp(timestamp):
 	return 'on %s ' % timestamp.strftime("%A, %d. %B %Y")
+
+def render(content, *args, **kwargs):
+  tmpl = Template(content)
+  try:
+    return tmpl.render(
+      encoding = 'utf-8',
+      helpers = locals,
+      *args,
+      **kwargs
+    )
+  except:
+    return exceptions.text_error_template().render()
+
+
+def text(post, join_with = '\n', *args, **kwargs):
+	md_content = markdown.markdown(join_with.join(post['text']))
+	return render(md_content, *args, **kwargs)
