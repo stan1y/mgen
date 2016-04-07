@@ -54,7 +54,8 @@ def tr(text):
 	return text
 
 def urljoin(*args):
-	return urllib.quote(os.path.join(*args))
+	lst = [a.encode('utf-8') for a in args]
+	return urllib.quote(os.path.join(*lst))
 
 def link(linkPath):
 	if linkPath.startswith('/'):

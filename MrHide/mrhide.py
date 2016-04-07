@@ -31,6 +31,7 @@ if __name__ == '__main__':
     parser.add_option("--lang", help = "Language of your site. Default is 'en'", default = 'en')
     parser.add_option("--use24hours", help = "All time values are read and written with format '%%H:%%M', otherwise as '%%I:%%M %%p. Default is True.' ", action="store_true", default=True)
     parser.add_option("--transliterate", action="store_true", help = "Convert unicode in post id to transliterated version. Requries 'unidecode'", default = True)
+    parser.add_option("--ignore-tag", help = "Posts with given comma separate tags will not be included in common pages.")
     
     parser.add_option("--clear", action="store_true", default=False, help="Remove target if any.")
     
@@ -78,6 +79,11 @@ if __name__ == '__main__':
         options.years = [int(y.strip()) for y in options.years.split(',')]
     else:
         options.years = [ datetime.datetime.now().year ]
+
+    if options.ignore_tag:
+        options.ignore_tag = [t.strip() for t in options.ignore_tag.split(',')]
+    else:
+        options.ignore_tag = []
     
     if options.source and os.path.exists(options.source) and options.target and options.url:
         if os.path.exists(options.target) and options.clear:

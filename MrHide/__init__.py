@@ -20,6 +20,13 @@ from mako import exceptions
 import helpers
 import defines
 
+
+rsync_avail = False
+rc = os.system("/usr/bin/rsync --version")
+if rc == 0:
+    rsync_avail = True
+
+
 def yesno(b):
     if b: 
         return 'yes'
@@ -27,6 +34,10 @@ def yesno(b):
         return 'no'
 
 class Post(dict):
+
+    def __init__(self):
+        self["template"] = defines.postTemplate
+
     #sorting with date member for list.sort()
     def __cmp__(self, other):
         if self['date'] == other['date']: return 0
@@ -165,7 +176,9 @@ class MrHide(object):
                                         encoding_errors='replace')
         
     def title(self, post, value):
-        post['title'] = value
+        if value is None or len(value) == 0:
+            raise Exception("No title in post")
+        post['title'] = value.decode('utf-8')
         
     def date(self, post, value):
         #we got a number of ways how to define a date
@@ -194,7 +207,7 @@ class MrHide(object):
         post['date'] = datetime.datetime.strptime(value.strip(), '%s%s' % (dateFmt, timeFmt))
         
     def tags(self, post, value):
-        post['tags'] = [ tag.strip() for tag in value.split(',') if tag]
+        post['tags'] = [ tag.strip().decode('utf-8') for tag in value.split(',') if tag]
 
     def parse_post(self, filename):
         logging.debug('Parsing %s' % filename)
@@ -212,10 +225,11 @@ class MrHide(object):
                     post['text'] = []
                 else:
                     name, d, value = [ token.strip() for token in line.partition(':')]
+                    logging.debug("setting attribute %s = %s" % (name, value))
                     if hasattr(self, name.encode('utf-8')):
                         getattr(self, name)(post, value.encode('utf-8'))
                     else:
-                        setattr(post, name, value)
+                        post[name] = value
                     
         if not 'title' in post.keys():
             print 'Oups, post %s has no title!' % filename
@@ -227,7 +241,8 @@ class MrHide(object):
             print 'Oups, post %s has no date!' % filename
             sys.exit(-1)
 
-        post['id'] = self.get_post_id(post)
+        if not post.get('id'):
+            post['id'] = self.get_post_id(post)
         return post
         
     def get_post_id(self, post):
@@ -243,7 +258,13 @@ class MrHide(object):
             
         outputResourcesFolder = os.path.join(self.options.target, defines.resources)
         print 'Generating resources'
-        shutil.copytree(os.path.join(self.options.source, defines.inResources), outputResourcesFolder)
+        if rsync_avail:
+            os.system("/usr/bin/rsync -a \"%s\" \"%s\" " % (
+                os.path.join(self.options.source, defines.inResources), 
+                outputResourcesFolder
+                ))
+        else:
+            shutil.copytree(os.path.join(self.options.source, defines.inResources), outputResourcesFolder)
     
     def render_template(self, template, *args, **kwargs):
         try:
@@ -264,18 +285,20 @@ class MrHide(object):
         outputPostsFolder = os.path.join(self.options.target, defines.posts)
         postPath = os.path.join(os.path.join(outputPostsFolder, 'id', helpers.tr(post['id'])))
         if not os.path.exists(postPath):
-            logging.debug('creaing %s' % postPath)
+            logging.debug('Generating file at %s' % postPath)
             os.makedirs(postPath)
         postByDatePath = os.path.join(outputPostsFolder, 'date', 
             str(post['date'].year), str(post['date'].month), 
             str(post['date'].day), helpers.tr(post['id']))
         if not os.path.exists(postByDatePath):
-            logging.debug('creating %s' % postByDatePath)
+            logging.debug('creating folder %s' % postByDatePath)
             os.makedirs(postByDatePath)
         
-        logging.debug('Generating post: %s' % os.path.join(postPath, 'index.html'))
+        logging.debug('Generating post id: %s, template: %s' % (
+            post['id'], post['template'])
+        )
         with open( os.path.join(postPath, 'index.html'), 'w') as postFile:
-            template = self.templates.get_template(defines.postTemplate)
+            template = self.templates.get_template(post['template'])
             postFile.write(self.render_template(template, post = post))
         shutil.copy2(os.path.abspath(os.path.join(postPath, 'index.html')), os.path.abspath(postByDatePath))
         
@@ -300,7 +323,7 @@ class MrHide(object):
         
         tmpl = defines.blogPageTemplate
         tag_tmpl = 'tag_%s.html' % tag
-        if os.path.exists( os.path.join(defines.inTemplates, tag_tmpl) ):
+        if os.path.exists( os.path.join(self.options.source, defines.inTemplates, tag_tmpl) ):
             logging.debug('Using custom page for tag: %s' % tag)
             tmpl = tag_tmpl
 
@@ -320,7 +343,7 @@ class MrHide(object):
                     filters = filters,
                     pageNumber = pageNumber,
                     totalPages = totalPages, 
-                    page = sorted(page))
+                    page = page)
             )
         
     def generate_indexes(self, tags, posts, pages, dates, monthsByPosts):
@@ -347,7 +370,7 @@ class MrHide(object):
             shutil.copy2(os.path.abspath(src), os.path.abspath(dst))
             
         #create /index.html with overview
-        logging.debug('Generating index.html')
+        logging.debug('Generating root index.html')
         indexPath = os.path.join(self.options.target, 'index.html')
         with open(indexPath, 'w') as indexFile:
             template = self.templates.get_template(defines.indexTemplate)
@@ -402,7 +425,7 @@ class MrHide(object):
                 tagTitle = 'Posts of %s with tag %s' % (self.options.title, tag)
                 tagDesc = 'Last %d posts of %s with tag %s' % ( len(postsWithTag), self.options.title, tag)
                 self._generate_feed(tagFeedPath, self.options.webroot + '/tag/%s' % helpers.tr(tag), postSizes, postsWithTag, tagTitle, tagDesc)
-            print '  totally %d tag feeds written' % len(tags.keys())
+            print '  total %d tag feeds written' % len(tags.keys())
         else:
             print '  no tags to process'
             
@@ -432,7 +455,8 @@ class MrHide(object):
         with open(pageFileTemplatePath, 'r') as templateFile:
             tmpl = Template(templateFile.read(), lookup = self.templates)
             self.miscPages.append(pageUrl)
-            with open(os.path.join(pageFileOutFolder, 'index.html'), 'w') as pageFile:
+            pageFilePath = os.path.join(pageFileOutFolder, 'index.html')
+            with open(pageFilePath, 'w') as pageFile:
                 pageFile.write(self.render_template(tmpl).encode('utf-8', 'replace'))
     
     def generate_misc(self):
@@ -449,7 +473,7 @@ class MrHide(object):
             print ' - %s' % pageFile
             self.generate_page(os.path.join(pagesFolder, pageFile))
             total_pages += 1
-        print '    totaly %d pages written' % total_pages
+        print '    total %d pages written' % total_pages
     
     def generate_app_engine_site(self):
         if self.options.skip_gae:
@@ -554,6 +578,13 @@ class MrHide(object):
                 disallow_list = disallow_list,
             ).encode('utf-8', 'replace'))
 
+    def is_ignored_tag(self, post):
+        if self.options.ignore_tag:
+            for ignored_tag in self.options.ignore_tag:
+                if ignored_tag in post['tags']:
+                    return True
+        return False
+
     def generate(self):
         logging.debug('Reading site %s' % self.options.source)
         postsFolder = os.path.join(self.options.source, defines.inPosts)
@@ -571,18 +602,22 @@ class MrHide(object):
         
         #Parse *.md files and populate posts list
         print 'Generating posts'
+        total_posts = 0
         for postFile in [p for p in os.listdir(postsFolder) if p.endswith('.md')]:
             post = self.parse_post(os.path.join(postsFolder, postFile))
-            posts.append(post)
+            self.generate_post(post)
+            total_posts += 1
             #append to tags
             for tag in post['tags']:
                 if not tag in tags:
                     tags[tag] = []
                 tags[tag].append(post)
-            #append to date dicts
-            dates[post['date'].year][post['date'].month][post['date'].day].append(post)
-            self.generate_post(post)
-        print '  totaly %d posts written' % len(posts)
+            if not self.is_ignored_tag(post):
+                #append to all posts
+                posts.append(post)
+                #append to date dicts
+                dates[post['date'].year][post['date'].month][post['date'].day].append(post)
+        print '  total %d posts written' % total_posts
         #Sort posts by date
         posts.sort()
         posts.reverse()
@@ -603,14 +638,14 @@ class MrHide(object):
             
         for pageNumber in pages:
             self.generate_blog_page(pageNumber, len(pages), pages[pageNumber])
-        print '  totally %d pages written' % len(pages)
+        print '  total %d pages written' % len(pages)
         #Process posts & build pages for tags        
         for tag in tags:
             postsWithTag = tags[tag]
             
             #Sort posts with tag by date
-            postsWithTag.sort()
-            postsWithTag.reverse()
+            #postsWithTag.sort()
+            #postsWithTag.reverse()
             
             logging.debug('Processing tag %s with %d posts' % ( tag, len(postsWithTag) ))
             totalPagesWithTag = len(postsWithTag) / self.options.posts
@@ -620,6 +655,8 @@ class MrHide(object):
             for post in postsWithTag:
                 postPage.append(post)
                 if postIndex == self.options.posts or (postIndex + 1 == len(postsWithTag)):
+                    postPage.sort()
+                    postPage.reverse()
                     self.generate_tag_page(tagPageNumber, totalPagesWithTag, postPage, tag)
                     postPage = []
                     tagPageNumber += 1
@@ -653,7 +690,7 @@ class MrHide(object):
                     postsByMonthPath = os.path.join(outputPostsFolder, 'date', str(y), str(m), 'index.html')
                     self._generate_blog_page(postsByMonthPath, 1, 1, postsByMonth, filters = {'year' : y, 'month': m})                
                     totalDatePages +=1
-        print '  totally %d date pages written' % totalDatePages
+        print '  total %d date pages written' % totalDatePages
         
         self.generate_resources()
         self.generate_indexes([tag for tag in tags], posts, pages, dates, monthsByPosts)
