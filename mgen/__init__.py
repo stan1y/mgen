@@ -1,9 +1,9 @@
 #
-# Mr. Hide Site Genetator
+# MGEN Site Web Sites Genetator
 # Copyright Stanislav Yudin, 2010-2014
 #
 
-__version__ = '0.0.5'
+__version__ = (1, 0, 0)
 
 import sys
 import os
