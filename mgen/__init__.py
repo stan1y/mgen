@@ -141,7 +141,7 @@ disallow: ${path}
 %endfor
 ''' 
 
-class MrHide(object):
+class MGEN(object):
     def __init__(self, options):
         if options.debug:
             logging.basicConfig(level = logging.DEBUG)

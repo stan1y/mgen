@@ -12,7 +12,7 @@ import datetime
 import optparse
 import shutil
 
-import MrHide
+import mgen
 
 __debug = False
 
@@ -96,7 +96,7 @@ if __name__ == '__main__':
                 source = source[:1]
             options.title = os.path.basename(source).capitalize()
         
-        hide = MrHide.MrHide(options)
-        hide.generate()
+        gen = mgen.MGEN(options)
+        gen.generate()
     else:
         parser.print_help()
