@@ -18,6 +18,13 @@ $(document).ready(function() {
 
 </script>
 
+<style>
+    #profile-photo {
+        width: 32px;
+        height: 32px;
+    }
+</style>
+
 {% end %}
 
 {% block content %}
@@ -25,12 +32,12 @@ $(document).ready(function() {
     <div id="mgen-sidebar">
         <ul class="mgen-sidebar-nav">
             <li class="mgen-sidebar-brand">
-                <a href="/profile">
-                    <img src="{{ profile['picture'] }}" />
-                    {{ profile['name'] }}
-                </a>
+                    <a href="/profile">
+                        <img id="profile-photo" src="{{ escape(profile['picture']) }}" />
+                        {{ escape(profile['name']) }}
+                    </a>
             </li>
-            <li>
+            <li class="current">
                 <a href="/dashboard">Dashboard</a>
             </li>
             <li>
@@ -45,17 +52,22 @@ $(document).ready(function() {
         </ul>
     </div>
     <div id="mgen-content">
+        <span>
+            <button id="mgen-sidebar-toggle" type="button" class="btn btn-default btn-lg">
+                <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+            </button>
+            <span id="mgen-content-title">Dashboard</span>
+        </span>
+        
         <div class="container-fluid">
             <div class="row">
                 <div class="col-lg-12">
-                    <h1>Dashboard</h1>
                     <p>
                         {{ user }}
                     </p>
                     <p>
                         {{ profile }}
                     </p>
-                    <a href="#mgen-side-toggle" class="btn btn-default" id="mgen-sidebar-toggle">Toggle Menu</a>
                 </div>
             </div>
         </div>
