@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# Mr. Hide Site Genetator
+# MGEN Site Genetator
 # Copyright Stanislav Yudin, 2010-2012
 #
 

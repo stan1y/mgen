@@ -19,7 +19,9 @@ log = logging.getLogger(__name__)
 class Dashboard(BaseRequestHandler):
     @authenticated
     def get(self):
-        return self.render("dashboard.html")
+        return self.render("dashboard.html", 
+                           user=self.current_user,
+                           profile=self.current_profile)
         
         
 class LoginForm(BaseRequestHandler):

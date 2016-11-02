@@ -2,9 +2,15 @@
 
 {% block title %}
 MGEN : Login
-{% endblock %}
+{% end %}
 
 {% block content %}
-<a href="/auth/google">Login with Google</a>
-<a href="/auth/facebook">Login with Facebook</a>
-{% endblock %}
+
+<div class="col-md-4 col-md-offset-4">
+    <a href="/auth/google"><img src="/static/img/sign_in_with_google.png" /></a>
+    <h2>or</h2>
+    <a href="/auth/facebook"><img src="/static/img/sign_in_with_facebook.png" /></a>
+</div>
+
+
+{% end %}
