@@ -1,0 +1,81 @@
+
+<!-- Begin new item dialog -->
+<div class="modal fade" id="new-item" tabindex="-1" role="dialog" aria-labelledby="new-item-label">
+<div class="modal-dialog" role="document">
+  <div class="modal-content">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      <h4 class="modal-title" id="new-item-label">Create and publish new item</h4>
+    </div>
+    <div class="modal-body">
+      <form>
+        <div class="form-group">
+          <label for="new-item-name">Name</label>
+          <input type="text" class="form-control" id="new-item-name" placeholder="Untitled Item" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="new-item-type">Type</label>
+          <p class="help-block">Type of item specifies format of the item body.</p>
+
+          {% for itype in item_types %}
+            <label class="radio-inline">
+              <input type="radio" name="new-item-type" \
+                     id="new-item-type" \
+                     value="{{ escape(itype) }}" checked>
+                {{ escape(item_types[itype]['desc']) }}
+              </input>
+            </label>
+          {% end %}
+        </div>
+        <div class="form-group">
+          <label for="new-item-tags">Tags</label>
+          <input type="text" class="form-control" id="new-item-tags" placeholder="blog, post">
+          <p class="help-block">Comma separated list of tags to assign to this item.</p>
+        </div>
+        <div class="form-group">
+            <div class="checkbox">
+                <label>
+                    <input id="new-item-published" type="checkbox" checked/> Publish now?
+                </label>
+            </div>
+            <input style="display: none;" type="text" class="form-control" id="new-item-publish-date" placeholder="31-10-2042" required />
+            <p class="help-block">Publish immediately or schedule on later date.</p>
+        </div>
+        <div class="form-group">
+          <label for="new-item-body">Content</label>
+          <div class="form-group">  
+            Import from 
+            <input type="radio" id="new-item-body-import" value="local" checked>Your computer</input>
+            <input type="radio" id="new-item-body-import" value="google-disk">Google Disk</input>
+            <input type="radio" id="new-item-body-import" value="dropbox">Dropbox</input>
+            
+            <input class="item-import selected" type="file" id="new-item-body-file">
+            <input class="item-import" type="text" id="new-item-body-google-disk" style="display: none;">
+            <input class="item-import" type="text" id="new-item-body-dropbox" style="display: none;">
+          </div>
+          <p class="help-block">
+            Item body can be loaded from previously prepared file, 
+            pasted from text editor or typed in directly. Use "Preview" to
+            check how this template would look like when rendered.
+          </p>
+          <textarea id="new-item-body" class="form-control" placeholder="## Untitled Item" required></textarea>
+          <button id="new-item-preview" class="btn btn-default">
+              <span class="glyphicon glyphicon-star" aria-hidden="true"></span> 
+              Preview
+            </button>
+        </div>
+        <div class="form-group">
+          <label for="new-item-uri">Local URI path</label>
+          <input type="text" class="form-control" id="new-item-uri" placeholder="my-custom-item">
+          <p class="help-block">Optional unique value to use in path to this item when building URIs. Leave empty for default based on the item name.</p>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button data-dismiss="modal" class="btn btn-default">Cancel</button>
+      <button id="new-item-create" class="btn btn-primary">Create</button>
+    </div>
+  </div>
+</div>
+</div>
