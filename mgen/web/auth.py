@@ -6,6 +6,7 @@ import json
 import logging
 import functools
 
+import mgen.util
 import mgen.error
 import mgen.model
 
@@ -87,8 +88,10 @@ class GoogleOAuth2Login(BaseRequestHandler,
                 s.commit()
                 log.debug('created new locale profile %s' % profile.id)
             
-            self.set_secure_cookie('mgen-auth-principal', json.dumps(user))
-            self.set_secure_cookie('mgen-auth-profile', json.dumps(profile.to_json()))
+            self.set_secure_cookie('mgen-auth-principal', json.dumps(user, 
+                                                                     cls=mgen.util.JSONEncoder))
+            self.set_secure_cookie('mgen-auth-profile', json.dumps(profile.to_json(),
+                                                                   cls=mgen.util.JSONEncoder))
             
             self.redirect('/')
             
