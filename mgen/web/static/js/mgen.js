@@ -53,7 +53,10 @@ MGEN.displayErrorDialog = function(title, message, msgId) {
     try {
         var err = JSON.parse(message)
         title = 'Error Occured: ' + err.exception
-        message = "Reason:\n" + err.reason
+        message = "Reason:\n" + err.reason + "\n" +
+                  "Traceback:\n" +
+                  err.traceback.join("\n")
+                  
     }
     catch(SyntaxError) {
         console.log("received error is not well formed exception")
@@ -113,7 +116,8 @@ MGEN.DataStore.prototype.update = function(callback) {
     })
 }
 
-MGEN.DataStore.prototype.get = function(objID) {
+MGEN.DataStore.prototype.get = function(objID, callback) {
+    var self = this;
     $.ajax(this.apiPath + "/" + objID, {
         method: "GET",
         dataType: "json",
@@ -122,9 +126,9 @@ MGEN.DataStore.prototype.get = function(objID) {
         },
         success: function(data) {
             // assume single item returned
-            this.total = data.total
-            this.data = data[this.collectionName]
-            $(this).trigger('changed')
+            if (data.total == 1 && callback !== undefined) {
+                callback.call(this, data[self.collectionName][0])
+            }
         }
     })
 }
@@ -142,7 +146,7 @@ MGEN.DataStore.prototype.add = function(obj, callback) {
         success: function(data) {
             // assume single item returned
             // pass it to caller's callback
-            if (data.total == 1) {
+            if (data.total == 1 && callback !== undefined) {
                 callback.call(this, data[self.collectionName][0])
             }
                 

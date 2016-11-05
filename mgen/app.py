@@ -72,15 +72,26 @@ def run():
     # setup tornado application
     app = tornado.web.Application(
     	[
+    	    # Authentication endpoints
+    	    
     	    (r"/login",                        mgen.web.auth.Login),
     	    (r"/logout",                       mgen.web.auth.Logout),
     		(r"/auth/google",                  mgen.web.auth.GoogleOAuth2Login),
     		
-    		(r"/api/profiles",      mgen.web.api.Profiles),
-    		(r"/api/projects",      mgen.web.api.Projects),
+    		# API Endpoints
     		
-    		(r"/",                             mgen.web.ui.Overview),
-    		(r"/project/(?P<oid>s*)",          mgen.web.ui.Project),
+    		(r"/api/profiles",                        mgen.web.api.Profiles),
+    		(r"/api/projects",                        mgen.web.api.Projects),
+    		(r"/api/projects/(?P<oid>[0-9a-zA-Z]+)",  mgen.web.api.Projects),
+    		(r"/api/templates",                       mgen.web.api.Templates),
+    		(r"/api/templates/(?P<oid>[0-9a-zA-Z]+)", mgen.web.api.Templates),
+    		(r"/api/items",                           mgen.web.api.Items),
+    		(r"/api/items/(?P<oid>[0-9a-zA-Z]+)",     mgen.web.api.Items),
+    		
+    		# UI Endpoints
+    		
+    		(r"/",                                    mgen.web.ui.Overview),
+    		(r"/project/(?P<oid>[0-9a-zA-Z]+)",       mgen.web.ui.Project),
     	],
     	
     	

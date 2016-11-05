@@ -10,6 +10,7 @@ import logging
 import tornado.web
 import mgen.model
 import mgen.error
+import mgen.util
 import sqlalchemy.orm.exc
 
 
@@ -33,5 +34,4 @@ class BaseRequestHandler(tornado.web.RequestHandler):
     @property
     def current_profile(self):
         profile_info = self.get_profile()
-        return mgen.model.session().query(mgen.model.Profile).filter_by(
-                id=profile_info['email']).first()
+        return mgen.model.session().query(mgen.model.Profile).filter_by(email=profile_info['email']).first()

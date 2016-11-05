@@ -1,69 +1,140 @@
 {% extends dashboard.html %}
 
+{% block head %}
+<script type="text/javascript" src="/static/js/dashboard.js"></script>
+<script type="text/javascript" src="/static/js/project.js"></script>
+{% end %}
+
 {% block dashboard-frame %}
+<input type="hidden" id="project-id" value="{{ escape(project.project_id.hex) }}" />
 <div class="container">
+  
+  {% include "dlg/new-item.html" %}
+  
   <div class="page-header">
     <h1>{{ escape(project.title) }}</h1>
+    <h2>{{ escape(project.public_base_uri) }}</h2>
   </div>
+  
+  <!-- Begin project menu content -->
+  <div class="btn-group" role="group" aria-label="...">
+    <button id="project-settings" class="btn btn-default">
+      <span class="glyphicon glyphicon-cog" aria-hidden="true"></span> 
+      Project setting
+    </button>
+    <button id="project-members" class="btn btn-default">
+      <span class="glyphicon glyphicon-user" aria-hidden="true"></span> 
+      Members
+    </button>
+    <div class="btn-group" role="group">
+      <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Build project
+        <span class="caret"></span>
+      </button>
+      <ul class="dropdown-menu">
+        <li><a id="project-build" href="#">Build</a></li>
+        <li><a id="project-build-deploy" href="#">Build & Deploy</a></li>
+      </ul>
+    </div>
+  </div>
+  
+  <!-- Begin project header content -->
   <p class="lead">
-      Settings and contents of the {{ escape(project.title) }} project.
-      There are 
-      <a href="{{ '/project/' + project.name + '/templates' }}">{{ len(templates) }} tempaltes</a>, 
-      <a href="{{ '/project/' + project.name + '/pages' }}">{{ len(pages) }} pages</a>, 
-      <a href="{{ '/project/' + project.name + '/sequences' }}">{{ len(sequences) }} sequences</a> and 
-      <a href="{{ '/project/' + project.name + '/items' }}">{{ len(items) }} items</a>. 
+    <h4>
+      The {{ escape(project.title) }} project containes
+      <a>4 tempaltes</a>, 
+      <a>12 pages</a>, 
+      <a>3 sequences</a> and 
+      <a>42 items</a>.
+    </h4>
+    
+    <h5>
+      Currently there are {{ len(project.members) }} people working on this project.
+    </h5>
+    
   </p>
-  <div class="container-fluid">
-      <div class="row">
-          <div class="col-xs-6 col-md-4">
-              <a href=""></a><h2>Project 1</h2></a>
-              <h4>http://example.com</h4>
-              <ul>
-                <li>4 Page Templates</li>
-                <li>19 Pages</li>
-                <li>31 Items in 2 Sequences</li>
-              </ul>
-          </div>
-          <div class="col-xs-6 col-md-4">
-              <a href="#"></a><h2>Project 2</h2></a>
-              <h4>http://example.com</h4>
-              <ul>
-                <li>4 Page Templates</li>
-                <li>19 Pages</li>
-                <li>31 Items in 2 Sequences</li>
-              </ul>
-          </div>
-          <div class="col-xs-6 col-md-4">
-              <a href="#"></a><h2>Project 3</h2></a>
-              <h4>http://example.com</h4>
-              <ul>
-                <li>4 Page Templates</li>
-                <li>19 Pages</li>
-                <li>31 Items in 2 Sequences</li>
-              </ul>
-          </div>
-      </div>
-      <div class="row">
-          <div class="col-xs-6 col-md-4">
-              <a href="#"></a><h2>Project 4</h2></a>
-              <h4>http://example.com</h4>
-              <ul>
-                <li>4 Page Templates</li>
-                <li>19 Pages</li>
-                <li>31 Items in 2 Sequences</li>
-              </ul>
-          </div>
-          <div class="col-xs-6 col-md-4">
-              <a href="#"></a><h2>Project 5</h2></a>
-              <h4>http://example.com</h4>
-              <ul>
-                <li>4 Page Templates</li>
-                <li>19 Pages</li>
-                <li>31 Items in 2 Sequences</li>
-              </ul>
-          </div>
-      </div>
+  
+  <!-- Begin items menu -->
+  <div class="btn-group" role="group" aria-label="...">
+    <button id="project-add-item" data-toggle="modal" data-target="#new-item" class="btn btn-default">
+      <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 
+      New Item
+    </button>
+    <button id="project-del-item" class="btn btn-warning disabled">
+      <span class="glyphicon glyphicon-minus" aria-hidden="true"></span> 
+    </button>
   </div>
+  
+  <hr />
+  
+  <!-- Begin items grid -->
+  <img class="progress-small" id="progress-items" src="/static/img/01-progress.gif" />
+  
+  <div id="project-items" class="container-fluid">
+  </div>
+  
+  <br/>
+  
+  <!-- Begin sequences menu -->
+  <div class="btn-group" role="group" aria-label="...">
+    <button id="project-add-seq" class="btn btn-default">
+      <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 
+      New Sequence
+    </button>
+    <button id="project-del-seq" class="btn btn-warning disabled">
+      <span class="glyphicon glyphicon-minus" aria-hidden="true"></span> 
+    </button>
+  </div>
+  
+  <hr/>
+  
+  <!-- Begin sequences grid -->
+  <img class="progress-small" id="progress-seq" src="/static/img/01-progress.gif" />
+  
+  <div id="project-seq" class="container-fluid">
+  </div>
+  
+  <br />
+    
+  <!-- Begin templates menu -->
+  <div class="btn-group" role="group" aria-label="...">
+    <button id="project-add-tmpl" class="btn btn-default">
+      <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 
+      New Template
+    </button>
+    <button id="project-del-tmpl" class="btn btn-warning disabled">
+      <span class="glyphicon glyphicon-minus" aria-hidden="true"></span> 
+    </button>
+  </div>
+  
+  <hr/>
+  
+  <!-- Begin templates grid -->
+  <img class="progress-small" id="progress-tmpl" src="/static/img/01-progress.gif" />
+  
+  <div id="project-templates" class="container-fluid">
+  </div>
+  
+  <br />
+    
+  <!-- Begin pages menu -->
+  <div class="btn-group" role="group" aria-label="...">
+    <button id="project-add-page" class="btn btn-default">
+      <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 
+      New Page
+    </button>
+    <button id="project-del-page" class="btn btn-warning disabled">
+      <span class="glyphicon glyphicon-minus" aria-hidden="true"></span> 
+    </button>
+  </div>
+  
+  <hr />
+  
+  <!-- Begin pages grid -->
+  <img class="progress-small" id="progress-pages" src="/static/img/01-progress.gif" />
+  <div id="project-pages" class="container-fluid">
+  </div>
+  
 </div>
 
 {% end %}

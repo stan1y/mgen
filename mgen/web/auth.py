@@ -4,6 +4,7 @@ MGEN Web Authentication handlers
 
 import json
 import logging
+import pprint
 import functools
 
 import mgen.util
@@ -77,22 +78,27 @@ class GoogleOAuth2Login(BaseRequestHandler,
                 "https://www.googleapis.com/oauth2/v1/userinfo",
                 access_token=user["access_token"])
             
+            log.debug('--- begin google profile ---')
+            log.debug(pprint.pformat(userinfo, indent=2, width=160))
+            log.debug('--- end google profile ---')
+            
             s = session()
-            profile = s.query(mgen.model.Profile).filter_by(id=userinfo["email"]).first()
+            email = userinfo["email"]
+            profile = s.query(mgen.model.Profile).filter_by(email=email).first()
             if not profile:
                 profile = mgen.model.Profile(
-                    id=userinfo["email"],
-                    name=userinfo["name"],
-                    picture=userinfo["picture"])
+                    email=email,
+                    name = userinfo["name"],
+                    picture = userinfo["picture"])
                 s.add(profile)
                 s.commit()
-                log.debug('created new locale profile %s' % profile.id)
+                log.debug('created new local profile: %s' % profile.email)
             
             self.set_secure_cookie('mgen-auth-principal', json.dumps(user, 
                                                                      cls=mgen.util.JSONEncoder))
             self.set_secure_cookie('mgen-auth-profile', json.dumps(profile.to_json(),
                                                                    cls=mgen.util.JSONEncoder))
-            
+            log.debug('session cookies saved')
             self.redirect('/')
             
         else:

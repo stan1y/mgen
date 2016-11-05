@@ -8,6 +8,7 @@ import json
 import functools
 import logging
 import traceback
+import datetime
 
 import tornado
 import tornado.web
@@ -54,7 +55,9 @@ class BaseAPIRequestHandler(BaseRequestHandler):
                 
         ex.append('traceback', traceback.format_exception(ex_type, ex, ex_trsbk))
         self.set_header('Content-Type', 'application/json')
-        self.write(ex.format())
+        ex_msg = ex.format()
+        log.error('Exception: %s' % ex_msg)
+        self.write(ex_msg)
     
     @property
     def request_params(self):
@@ -142,14 +145,17 @@ class GenericModelHandler(BaseAPIRequestHandler):
         log.debug('range query for %s' % repr(model))
         return model.range(query, self.get_argument('range'))
 
-    def fetch(self, query, page_args, obj_id=None, collection="objects", **kwargs):
+    def fetch(self, query, page_args, single=None, collection="objects", **kwargs):
         """Generic get method for models with paging support and conversion to json"""
-        if obj_id != None:
+        if single != None:
             # get object by id
-            obj = query.filter_by(id=obj_id).first()
+            k, v = single
+            filter = {k: v}
+            obj = query.filter_by(**filter).first()
             if obj == None:
-                raise mgen.error.NotFound().describe('object with id "{0}" was not found in "{1}"'.format(
-                    obj_id, collection))
+                raise mgen.error.NotFound().describe('object with %s=%s was not found in "%s"' % (
+                    k, v, collection)
+                )
             return {
                 "total": 1,
                 collection: [obj]
@@ -169,13 +175,13 @@ class GenericModelHandler(BaseAPIRequestHandler):
                 collection: objects
             }
             
-    def restfull_get(self, model, oid=None):
+    def restfull_get(self, model, single=None):
         """RESTfull GET object or list of objects"""
         log.debug('REST GET {0}{1}'.format(model, 
-                                           ", oid: %s" % oid if oid else ""))
+                                           ", %s=%s" % single if single else ""))
         return self.fetch(session().query(model), 
                           self.page_arguments,
-                          obj_id=oid,
+                          single=single,
                           collection=collection_name(model)
                           )
                           
@@ -183,13 +189,12 @@ class GenericModelHandler(BaseAPIRequestHandler):
         """RESTfull POST to create a new object"""
         params = self.request_params
         log.debug('REST POST {0}, {1} properties'.format(model, len(params)))
-        new_inst = model(id = uuid.uuid4())
-        for key in params:
-            if not hasattr(new_inst, key):
-                raise mgen.error.BadRequest().describe('no such property: ' + key)
-            val = params[key]
-            log.debug("- %s=%s" % (key, val))
-            setattr(new_inst, key, val)
+        new_inst = model()
+        for c in model.__table__.columns:
+            val = params.get(c.name, None)
+            if val != None:
+                log.debug("- %s=%s" % (c.name, val))
+                setattr(new_inst, c.name, val)
         return new_inst
     
     def commit_changes(self, s = None):
@@ -219,7 +224,8 @@ class Profiles(GenericModelHandler):
     @jsonify
     def get(self, oid=None):
         """GET list or single profile"""
-        return self.restfull_get(mgen.model.Profile, oid)
+        return self.restfull_get(mgen.model.Profile,
+                                 single=None if oid is None else ('email', oid))
 
                           
 class Projects(GenericModelHandler):
@@ -229,17 +235,85 @@ class Projects(GenericModelHandler):
     @jsonify
     def get(self, oid=None):
         """GET list or single project"""
-        return self.restfull_get(mgen.model.Project, oid)
+        return self.restfull_get(mgen.model.Project,
+                                 single=None if oid is None else ('project_id', oid))
         
     @authenticated
     @jsonify
-    def post(self, oid=None):
+    def post(self):
         """POST to create a new project"""
         s = session()
         project = self.restfull_post(mgen.model.Project)
+        project.project_id = uuid.uuid4()
         s.add(project)
         project.members.append(self.current_profile)
         self.commit_changes(s)
         self.set_status(201)
-        return self.restfull_get(mgen.model.Project, oid=project.id)
+        
+        log.debug('created new project: %s' % project.project_id)
+        return self.restfull_get(mgen.model.Project,
+                                 single=('project_id', project.project_id))
+                                 
+                                 
+class Templates(GenericModelHandler):
+    """"Templates restfull interface"""
+    
+    @authenticated
+    @jsonify
+    def get(self, oid=None):
+        """GET list or single project"""
+        return self.restfull_get(mgen.model.Template,
+                                 single=None if oid is None else ('template_id', oid))
+        
+    @authenticated
+    @jsonify
+    def post(self):
+        """POST to create a new project"""
+        s = session()
+        t = self.restfull_post(mgen.model.Project)
+        t.template_id = uuid.uuid4()
+        s.add(t)
+        self.commit_changes(s)
+        self.set_status(201)
+        
+        log.debug('created new template: %s' % t.template_id)
+        return self.restfull_get(mgen.model.Template,
+                                 single=('template_id', t.template_id))
+
+
+class Items(GenericModelHandler):
+    """Items restfull interface"""
+    
+    @authenticated
+    @jsonify
+    def get(self, oid=None):
+        """GET list or single project"""
+        return self.restfull_get(mgen.model.Item,
+                                 single=None if oid is None else ('item_id', oid))
+        
+    @authenticated
+    @jsonify
+    def post(self):
+        """POST to create a new item"""
+        s = session()
+        i = self.restfull_post(mgen.model.Item)
+        i.item_id = uuid.uuid4()
+        if not i.uri_path:
+            i.uri_path = i.name.lower().replace(' ', '-').replace('/', '-').replace('\\', '-')
+        # publish_on -> publish_date
+        if i.published:
+            i.publish_date = datetime.datetime.now()
+        else:
+            i.publish_date = datetime.datetime.strptime('%d-%M-%Y',
+                                                        self.request_params["publish_on"])
+            if i.publish_date < datetime.datetime.now():
+                raise mgen.error.BadRequest().describe("publish_on can not be in past if you want to schedule")
+
+        s.add(i)
+        self.commit_changes(s)
+        self.set_status(201)
+        
+        log.debug('created new item: %s' % i.item_id)
+        return self.restfull_get(mgen.model.Item,
+                                 single=('item_id', i.item_id))
         

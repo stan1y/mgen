@@ -32,7 +32,7 @@ $(document).ready(function() {
             
             currentRow.append(
                 $('<div class="dashboard col-xs-6 col-md-4">' +
-                    '<a href="/project/' + proj.id + '"></a>' +
+                    '<a href="/project/' + proj.id + '">' +
                     '<h2>' + proj.title + '</h2></a>' +
                     '<h4>' + proj.public_base_uri + '</h4>' +
                     '<ul> ' +

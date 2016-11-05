@@ -8,9 +8,12 @@ import uuid
 import json
 import cgi
 import logging
+import enum
 
 import mgen
 import mgen.error
+
+import mgen.generator.template
 
 import sqlalchemy.exc
 
@@ -24,6 +27,8 @@ from sqlalchemy.types import Text
 from sqlalchemy.types import String
 from sqlalchemy.types import Integer
 from sqlalchemy.types import DateTime
+from sqlalchemy.types import Boolean
+from sqlalchemy.types import Enum
 
 from sqlalchemy.ext.mutable import Mutable
 
@@ -170,7 +175,9 @@ class IDType(TypeDecorator):
     def process_bind_param(self, value, dialect):
         if value == None:
             return value
-        return value.hex
+        if isinstance(value, uuid.UUID):
+            return value.hex
+        return value
 
     def process_result_value(self, value, dialect):
         return uuid.UUID(value)
@@ -263,15 +270,15 @@ class BaseModel(object):
 
 project_membership = Table("project_membership",
                            BaseModel.metadata,
-                           Column('project_id', IDType, ForeignKey("project.id")),
-                           Column('profile_id', EscapedString(255), ForeignKey("profile.id")),
+                           Column('project', IDType, ForeignKey("project.project_id")),
+                           Column('profile', EscapedString(255), ForeignKey("profile.email")),
                            Column('permissions', Integer))
 
 
 class Profile(GenericModelMixin, BaseModel):
     '''Base class represending local profile for security principals'''
     
-    id = Column(EscapedString(255), primary_key=True)
+    email = Column(EscapedString(255), primary_key=True)
     name = Column(EscapedString(255))
     picture = Column(EscapedString(1024))
     projects = relationship("Project", 
@@ -281,11 +288,11 @@ class Profile(GenericModelMixin, BaseModel):
     @validates('id')
     def validate_id(self, key, val):
         '''Make sure profile id is well formed email'''
-        assert validate_email(val, check_mx=True)
+        assert validate_email(val, check_mx=False)
                             
     def to_json(self):
         return {
-            "email": self.id,
+            "email": self.email,
             "name": self.name,
             "picture": self.picture,
             "projects": [p.id for p in self.projects]
@@ -295,7 +302,7 @@ class Profile(GenericModelMixin, BaseModel):
 class Project(GenericModelMixin, BaseModel):
     '''The project to build a static website'''
     
-    id = Column(IDType, primary_key=True)
+    project_id = Column(IDType, primary_key=True)
     title = Column(EscapedString(255))
     public_base_uri = Column(EscapedString(1024))
     options = Column(MutationDict.as_mutable(JSONObject))
@@ -305,26 +312,29 @@ class Project(GenericModelMixin, BaseModel):
 
     def to_json(self):
         return {
-            'id': self.id,
+            'id': self.project_id,
             'title': self.title,
             'public_base_uri': self.public_base_uri,
-            'members': [m.id for m in self.members]
+            'members': [m.email for m in self.members],
+            'slugs': [s.slud_id for s in self.slugs],
+            'templates': [t.template_id for t in self.templates]
         }
 
 
 class Slug(GenericModelMixin, BaseModel):
     '''The tarball with generated static content of some project'''
     
-    id = Column(IDType, primary_key=True)
-    project_id = Column(IDType, ForeignKey('slug.id'))
-    project = relationship(Profile, backref=backref('slugs', lazy='dynamic'))
+    slug_id = Column(IDType, primary_key=True)
     created = Column(DateTime)
-    created_by = Column(EscapedString(255), ForeignKey('profile.id'))
+    created_by = Column(EscapedString(255), ForeignKey('profile.email'))
     size = Column(Integer)
+    
+    project_id = Column(IDType, ForeignKey('project.project_id'))
+    project = relationship(Project, backref=backref('slugs', lazy='dynamic'))
     
     def to_json(self):
         return {
-            'id': self.id,
+            'id': self.slug_id,
             'project': self.project_id,
             'created': self.created,
             'created_by': self.created_by,
@@ -333,11 +343,76 @@ class Slug(GenericModelMixin, BaseModel):
     
     @property
     def filename(self):
-        return self.id + ".slug"
+        return self.slug_id + ".slug"
     
     @property
     def filepath(self):
         return os.path.join(mgen.options(mgen.SLUGS_LOCAL_PATH), self.filename)
+
+
+tag2item = Table("tag2item",
+                BaseModel.metadata,
+                Column('tag', EscapedString(255), ForeignKey("tag.tag")),
+                Column('item', IDType, ForeignKey("item.item_id")))
+
+
+class Tag(GenericModelMixin, BaseModel):
+    '''Tag is a string attibute marker'''
+    
+    tag = Column(EscapedString(255), primary_key=True)
+    items = relationship("Item", 
+                         secondary=tag2item,
+                         back_populates="tags")
+                         
+    def to_json(self):
+        return {'tag': self.tag }
+
+
+class Item(GenericModelMixin, BaseModel):
+    '''Item is a generic container with user provided content'''
+    
+    item_id = Column(IDType, primary_key=True)
+    name = Column(EscapedString(255))
+    uri_path = Column(EscapedString(255))
+    type = Column(EscapedString(255))
+    body = Column(Text)
+    published = Column(Boolean)
+    publish_date = Column(DateTime)
+    tags = relationship("Tag", 
+                       secondary=tag2item,
+                       back_populates="items")
+                       
+    def to_json(self):
+        return {
+            'id': self.item_id,
+            'type': self.type.name if self.type is not None else None,
+            'name': self.name,
+            'uri_path': self.uri_path,
+            'body': self.body,
+            'published': self.published,
+            'publish_date': self.publish_date,
+            'tags': [t.tag for t in self.tags]
+        }
+    
+
+class Template(GenericModelMixin, BaseModel):
+    '''Template is used to render Items into html for Slug'''
+    
+    template_id = Column(IDType, primary_key=True)
+    name = Column(EscapedString(255))
+    type = Column(EscapedString(255))
+    data = Column(JSONObject)
+    
+    project_id = Column(IDType, ForeignKey('project.project_id'))
+    project = relationship(Project, backref=backref('templates', lazy='dynamic'))
+    
+    def to_json(self):
+        return {
+            'id': self.template_id,
+            'name': self.name,
+            'type': self.type.name if self.type is not None else None,
+            'data': self.data
+        }
 
 #
 # MGEN Data Storage Sessions

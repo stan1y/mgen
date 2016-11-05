@@ -78,5 +78,5 @@ class Conflict(MGENException):
     
     def duplicate_object(self, col_name):
         '''Indicates that a conflict was in duplicated object in a collection'''
-        self.reason('duplicate object in collection %s' % col_name)
+        self.describe('duplicate object in collection %s' % col_name)
         return self

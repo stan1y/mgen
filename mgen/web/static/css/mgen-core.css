@@ -33,3 +33,18 @@ body > .container {
 .container .text-muted {
   margin: 20px 0;
 }
+
+.profile-photo {
+  width: 24px;
+  height: 24px;
+}
+
+.progress {
+  width: 800px;
+  height: 600px;
+}
+
+.progress-small {
+  width: 150px;
+  height: 100px;
+}

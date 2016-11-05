@@ -32,7 +32,11 @@ class Project(BaseRequestHandler):
     @authenticated
     def get(self, oid):
         s = session()
+        proj = s.query(mgen.model.Project).filter_by(project_id=oid).one()
+        log.debug('displaying project %s' % proj.project_id)
         return self.render("project.html", 
                            user=self.current_user,
                            profile=self.current_profile,
-                           project=s.query(mgen.model.Project).filter_by(id=oid)).one()
+                           project=proj,
+                           item_types=mgen.generator.item_types,
+                           template_types=mgen.generator.template.template_types)
