@@ -6,71 +6,99 @@ MGEN : Dashboard
 
 {% block head %}
 
-<!-- toggle sidebar menu -->
-<script>
-
-$(document).ready(function() {
-    $("#mgen-sidebar-toggle").click(function(e) {
-        $("#mgen-dashboard").toggleClass("toggled")
-        return false
-    })
-})
-
-</script>
-
+<script type="text/javascript" src="/static/js/dashboard.js"></script>
 <style>
-    #profile-photo {
-        width: 32px;
-        height: 32px;
+    .profile-photo {
+        width: 24px;
+        height: 24px;
     }
 </style>
 
 {% end %}
 
 {% block content %}
-<div id="mgen-dashboard">
-    <div id="mgen-sidebar">
-        <ul class="mgen-sidebar-nav">
-            <li class="mgen-sidebar-brand">
-                    <a href="/profile">
-                        <img id="profile-photo" src="{{ escape(profile['picture']) }}" />
-                        {{ escape(profile['name']) }}
-                    </a>
-            </li>
-            <li class="current">
-                <a href="/dashboard">Dashboard</a>
-            </li>
-            <li>
-                <a href="/projects">Shortcuts</a>
-            </li>
-            <li>
-                <a href="/hosting">Overview</a>
-            </li>
-            <li>
-                <a href="/events">Events</a>
-            </li>
-        </ul>
+
+<!-- Fixed navbar -->
+<nav class="navbar navbar-default navbar-fixed-top">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/profile">
+          <span class="icon-bar"><img class="profile-photo" src={{ profile.picture }}></img></span>
+          {{ escape(profile.name) }}
+      </a>
     </div>
-    <div id="mgen-content">
-        <span>
-            <button id="mgen-sidebar-toggle" type="button" class="btn btn-default btn-lg">
-                <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
-            </button>
-            <span id="mgen-content-title">Dashboard</span>
-        </span>
+    <div id="navbar" class="collapse navbar-collapse">
+      <ul class="nav navbar-nav">
+          
+        <li class="active"><a href="/">Overview</a></li>
         
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-lg-12">
-                    <p>
-                        {{ user }}
-                    </p>
-                    <p>
-                        {{ profile }}
-                    </p>
-                </div>
-            </div>
-        </div>
+        <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Projects <span class="caret"></span></a>
+            <ul id="projects-selector" class="dropdown-menu">
+            </ul>
+        </li>
+        
+        <li><a href="/events">Events</a></li>
+        <li><a href="/hosting">Hosting</a></li>
+
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div>
+</nav>
+
+<!-- New Project Dialog -->
+<div class="modal fade" id="new-project" tabindex="-1" role="dialog" aria-labelledby="new-project-label">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="new-project-label">New Project</h4>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="form-group">
+              <label for="project-title">Title</label>
+              <input type="text" class="form-control" id="new-project-title" placeholder="Untitled">
+          </div>
+          <div class="form-group">
+              <label for="project-uri">Public URI</label>
+              <input type="text" class="form-control" id="new-project-uri" placeholder="http://www.example.com">
+          </div>
+          <div class="form-group">
+              <label for="project-import">Load from archive</label>
+              <input type="file" id="project-import">
+              <p class="help-block">You can specify previously saved project here.</p>
+          </div>
+          <div class="form-group">
+              <div class="checkbox">
+                  <label>
+                      <input id="new-project-enable-robots" type="checkbox"> Enable "robots.txt"
+                  </label>
+              </div>
+              <div class="checkbox">
+                  <label>
+                      <input id="new-project-enable-sitemap" type="checkbox"> Enable "sitemap.xml"
+                  </label>
+              </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button data-dismiss="modal" class="btn btn-default">Cancel</button>
+        <button id="new-project-create" class="btn btn-default">Create</button>
+      </div>
     </div>
+  </div>
 </div>
+
+<!-- Begin dashboard frame content -->
+{% block dashboard-frame %}
+{% end %}
+
 {% end %}

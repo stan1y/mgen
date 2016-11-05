@@ -1,0 +1,69 @@
+{% extends dashboard.html %}
+
+{% block dashboard-frame %}
+<div class="container">
+  <div class="page-header">
+    <h1>{{ escape(project.title) }}</h1>
+  </div>
+  <p class="lead">
+      Settings and contents of the {{ escape(project.title) }} project.
+      There are 
+      <a href="{{ '/project/' + project.name + '/templates' }}">{{ len(templates) }} tempaltes</a>, 
+      <a href="{{ '/project/' + project.name + '/pages' }}">{{ len(pages) }} pages</a>, 
+      <a href="{{ '/project/' + project.name + '/sequences' }}">{{ len(sequences) }} sequences</a> and 
+      <a href="{{ '/project/' + project.name + '/items' }}">{{ len(items) }} items</a>. 
+  </p>
+  <div class="container-fluid">
+      <div class="row">
+          <div class="col-xs-6 col-md-4">
+              <a href=""></a><h2>Project 1</h2></a>
+              <h4>http://example.com</h4>
+              <ul>
+                <li>4 Page Templates</li>
+                <li>19 Pages</li>
+                <li>31 Items in 2 Sequences</li>
+              </ul>
+          </div>
+          <div class="col-xs-6 col-md-4">
+              <a href="#"></a><h2>Project 2</h2></a>
+              <h4>http://example.com</h4>
+              <ul>
+                <li>4 Page Templates</li>
+                <li>19 Pages</li>
+                <li>31 Items in 2 Sequences</li>
+              </ul>
+          </div>
+          <div class="col-xs-6 col-md-4">
+              <a href="#"></a><h2>Project 3</h2></a>
+              <h4>http://example.com</h4>
+              <ul>
+                <li>4 Page Templates</li>
+                <li>19 Pages</li>
+                <li>31 Items in 2 Sequences</li>
+              </ul>
+          </div>
+      </div>
+      <div class="row">
+          <div class="col-xs-6 col-md-4">
+              <a href="#"></a><h2>Project 4</h2></a>
+              <h4>http://example.com</h4>
+              <ul>
+                <li>4 Page Templates</li>
+                <li>19 Pages</li>
+                <li>31 Items in 2 Sequences</li>
+              </ul>
+          </div>
+          <div class="col-xs-6 col-md-4">
+              <a href="#"></a><h2>Project 5</h2></a>
+              <h4>http://example.com</h4>
+              <ul>
+                <li>4 Page Templates</li>
+                <li>19 Pages</li>
+                <li>31 Items in 2 Sequences</li>
+              </ul>
+          </div>
+      </div>
+  </div>
+</div>
+
+{% end %}

@@ -1,0 +1,19 @@
+{% extends "dashboard.html" %}
+
+{% block dashboard-frame %}
+<div class="dashboard container">
+    <div class="dashboard page-header">
+        <h1>Overview</h1>
+    </div>
+    <p class="dashboard lead">
+        Welcome to the MGEN, {{ escape(profile.name) }}.
+    </p>
+    
+    <div id="dashboard-alerts">
+    </div>
+    <div id="dashboard-overview" class="dashboard container-fluid">
+    </div>
+    <img id="dashboard-progress" src="/static/img/01-progress.gif" />
+</div>
+
+{% end %}
