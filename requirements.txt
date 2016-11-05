@@ -1,3 +1,5 @@
 pyaml>=3.0
 markdown>=2.0
 tornado>=4.2.1
+sqlalchemy>=1.1
+validate_email>=1.3
