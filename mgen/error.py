@@ -67,6 +67,11 @@ class Unauthorized(MGENException):
         '''401 Unauthorized'''
         return 401
         
+class Forbidden(MGENException):
+    def http_status(self):
+        '''403 Forbidden'''
+        return 403
+        
 class NotFound(MGENException):
     def http_status(self):
         '''404 Not Found'''

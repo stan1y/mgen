@@ -20,18 +20,32 @@ log = logging.getLogger(__name__)
 class BaseRequestHandler(tornado.web.RequestHandler):
 
     def get_current_user(self):
+        '''
+        Returns current auth principal (token) json 
+        received from external auth provider and stored in
+        a secure cookie on client
+        '''
         prn = self.get_secure_cookie("mgen-auth-principal")
         if prn:
             return json.loads(prn.decode('utf-8'))
         return None
         
     def get_profile(self):
+        '''Returns profile id (email) stored in secure cookie'''
         profile = self.get_secure_cookie("mgen-auth-profile")
         if profile:
-            return json.loads(profile.decode('utf-8'))
+            return profile.decode('utf-8')
         return None
     
     @property
     def current_profile(self):
-        profile_info = self.get_profile()
-        return mgen.model.session().query(mgen.model.Profile).filter_by(email=profile_info['email']).first()
+        '''Returns a Profile model of the current user'''
+        if hasattr(self, '__cached_profile'):
+            return getattr(self, '__cached_profile')
+        
+        profile_email = self.get_profile()
+        log.debug('loading profile: %s' % profile_email)
+        self.__cached_profile = mgen.model.session().query(
+            mgen.model.Profile).filter_by(email=profile_email).first()
+            
+        return self.__cached_profile

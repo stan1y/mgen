@@ -18,7 +18,6 @@ MGEN.DataStore = function(collectionName) {
     }
     
     this.total = NaN
-    
 }
 
 MGEN.DataStore.prototype.enablePaging = function (page, start, limit) {
@@ -117,7 +116,7 @@ MGEN.DataStore.prototype.update = function(callback) {
 }
 
 MGEN.DataStore.prototype.get = function(objID, callback) {
-    var self = this;
+    var self = this
     $.ajax(this.apiPath + "/" + objID, {
         method: "GET",
         dataType: "json",
@@ -135,7 +134,7 @@ MGEN.DataStore.prototype.get = function(objID, callback) {
 
 
 MGEN.DataStore.prototype.add = function(obj, callback) {
-    var self = this;
+    var self = this
     $.ajax(this.apiPath, {
         method: "POST",
         dataType: "json",
@@ -152,4 +151,52 @@ MGEN.DataStore.prototype.add = function(obj, callback) {
                 
         }
     })
+}
+
+MGEN.Query = function(collectionName) {
+    this.collectionName = collectionName
+    this.apiPath = '/api/' + this.collectionName
+    this.flt = {}
+    this.data = []
+}
+
+MGEN.DataStore.prototype.query = function() {
+    return new MGEN.Query(this.collectionName)
+}
+
+MGEN.Query.prototype.filter = function(flt) {
+    this.flt = flt
+    return this
+}
+
+MGEN.Query.prototype.fetch = function(callback, refresh = false) {
+    if (this.data.length > 0 && !refresh) {
+        callback.call(this, this.data)
+        return this.data
+    }
+    
+    var self = this
+    return $.ajax(this.apiPath, {
+        method: "GET",
+        dataType: "json",
+        data: {filter: this.flt},
+        error: function(xhr, type, ex) {
+            MGEN.displayErrorDialog(ex, xhr.responseText)
+        },
+        success: function(data) {
+            self.total = data.total
+            self.data = data[self.collectionName]
+            $(self).trigger('loaded', self)
+            if (callback)
+                callback.call(this, self.data)
+        }
+    })
+}
+
+MGEN.Query.prototype.order_by = function() {
+    
+}
+
+MGEN.Query.prototype.range = function() {
+    
 }

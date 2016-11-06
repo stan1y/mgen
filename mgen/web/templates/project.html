@@ -12,20 +12,26 @@
   {% include "dlg/new-item.html" %}
   
   <div class="page-header">
-    <h1>{{ escape(project.title) }}</h1>
-    <h2>{{ escape(project.public_base_uri) }}</h2>
+    <h1 id="project-title">{{ escape(project.title) }}</h1>
+    <h2 id="project-public-base-uri">{{ escape(project.public_base_uri) }}</h2>
   </div>
   
   <!-- Begin project menu content -->
   <div class="btn-group" role="group" aria-label="...">
+    {% if allow_edit %}
     <button id="project-settings" class="btn btn-default">
       <span class="glyphicon glyphicon-cog" aria-hidden="true"></span> 
       Project setting
     </button>
+    {% end %}
+    {% if is_owner %}
     <button id="project-members" class="btn btn-default">
       <span class="glyphicon glyphicon-user" aria-hidden="true"></span> 
       Members
     </button>
+    {% end %}
+    
+    {% if allow_build %}
     <div class="btn-group" role="group">
       <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         Build project
@@ -33,27 +39,41 @@
       </button>
       <ul class="dropdown-menu">
         <li><a id="project-build" href="#">Build</a></li>
+        {% if allow_deploy %}
         <li><a id="project-build-deploy" href="#">Build & Deploy</a></li>
+        {% end %}
       </ul>
     </div>
+    {% end %}
+    {% if allow_deploy %}
+    <button id="project-deploy" class="btn btn-success">
+      <span class="glyphicon glyphicon-user" aria-hidden="true"></span> 
+      Deploy
+    </button>
+    {% end %}
   </div>
   
   <!-- Begin project header content -->
   <p class="lead">
     <h4>
       The {{ escape(project.title) }} project containes
-      <a>4 tempaltes</a>, 
-      <a>12 pages</a>, 
-      <a>3 sequences</a> and 
-      <a>42 items</a>.
+      <a id="project-templates-lnk" >{{ project.templates.count() }} templates </a>, 
+      <a id="project-templates-lnk">{{ project.items.count() }} items</a>, 
+      <a>0 sequences</a> and 
+      <a>0 pages</a>.
     </h4>
     
     <h5>
-      Currently there are {{ len(project.members) }} people working on this project.
+      Currently there are {{ len(project.members) }} people working on this project
+      {% if is_owner %}
+      , and you are the owner
+      {% end %}
+      .
     </h5>
     
   </p>
   
+  {% if allow_create %}
   <!-- Begin items menu -->
   <div class="btn-group" role="group" aria-label="...">
     <button id="project-add-item" data-toggle="modal" data-target="#new-item" class="btn btn-default">
@@ -64,6 +84,7 @@
       <span class="glyphicon glyphicon-minus" aria-hidden="true"></span> 
     </button>
   </div>
+  {% end %}
   
   <hr />
   
@@ -75,6 +96,7 @@
   
   <br/>
   
+  {% if allow_create %}
   <!-- Begin sequences menu -->
   <div class="btn-group" role="group" aria-label="...">
     <button id="project-add-seq" class="btn btn-default">
@@ -87,6 +109,7 @@
   </div>
   
   <hr/>
+  {% end %}
   
   <!-- Begin sequences grid -->
   <img class="progress-small" id="progress-seq" src="/static/img/01-progress.gif" />
@@ -96,6 +119,7 @@
   
   <br />
     
+  {% if allow_create %}
   <!-- Begin templates menu -->
   <div class="btn-group" role="group" aria-label="...">
     <button id="project-add-tmpl" class="btn btn-default">
@@ -108,6 +132,7 @@
   </div>
   
   <hr/>
+  {% end %}
   
   <!-- Begin templates grid -->
   <img class="progress-small" id="progress-tmpl" src="/static/img/01-progress.gif" />
@@ -116,7 +141,8 @@
   </div>
   
   <br />
-    
+  
+  {% if allow_create %}
   <!-- Begin pages menu -->
   <div class="btn-group" role="group" aria-label="...">
     <button id="project-add-page" class="btn btn-default">
@@ -129,6 +155,7 @@
   </div>
   
   <hr />
+  {% end %}
   
   <!-- Begin pages grid -->
   <img class="progress-small" id="progress-pages" src="/static/img/01-progress.gif" />

@@ -5,10 +5,12 @@ MGEN Rest API Inteface classes
 import zlib
 import uuid
 import json
+import pprint
 import functools
 import logging
 import traceback
 import datetime
+import enum
 
 import tornado
 import tornado.web
@@ -21,10 +23,11 @@ import mgen.util
 import mgen.error
 import mgen.model
 
-from mgen.model import session
+from mgen.model import session, get_primary_key
+from mgen.model import Permission
 
 from mgen.web import BaseRequestHandler
-from mgen.web.auth import authenticated
+from mgen.web.auth import authenticated, validate_access
 
 
 log = logging.getLogger(__name__)
@@ -112,90 +115,88 @@ class GenericModelHandler(BaseAPIRequestHandler):
     def sort(self, model, query):
         '''Server-side sorting support'''
         if not 'sort' in self.request.arguments:
-            log.debug('no sort arguments')
             return query
         if not issubclass(model, mgen.model.SortModelMixin):
-            log.debug('not a sorted instance')
+            log.warn('not a sorted instance')
             return query
         
-        log.debug('sorting query for %s' % repr(model))
         return model.sort(query, self.get_argument('sort'))
     
     def filter(self, model, query):
         '''Server side filtering support'''
         if not 'filter' in self.request.arguments:
-            log.debug('no filter arguments')
             return query
         if not issubclass(model, mgen.model.FilterModelMixin):
-            log.debug('not a sorted instance')
+            log.warn('not a sorted instance')
             return query
 
-        log.debug('filtering query for %s' % repr(model))
         return model.filter(query, self.get_argument('filter'))
 
     def range(self, model, query):
         '''Server side range query support'''
         if not 'range' in self.request.arguments:
-            log.debug('no range arguments')
             return query
         if not issubclass(model, mgen.model.RangeModelMixin):
-            log.debug('not a sorted instance')
+            log.warn('not a sorted instance')
             return query
-
-        log.debug('range query for %s' % repr(model))
         return model.range(query, self.get_argument('range'))
 
-    def fetch(self, query, page_args, single=None, collection="objects", **kwargs):
+    def fetch_page(self, query, collection="objects", **kwargs):
         """Generic get method for models with paging support and conversion to json"""
-        if single != None:
-            # get object by id
-            k, v = single
-            filter = {k: v}
-            obj = query.filter_by(**filter).first()
-            if obj == None:
-                raise mgen.error.NotFound().describe('object with %s=%s was not found in "%s"' % (
-                    k, v, collection)
-                )
+        
+        should_page, page_no, start, limit = self.page_arguments
+        if should_page and isinstance(query, sqlalchemy.orm.Query):
+            query = query.offset(start).limit(limit)
+        else:
+            log.debug('fetch list - paging disabled by client')
+
+        # perform query and convert results to json
+        log.debug('--- Begin SQL PAGE query ---')
+        log.debug(str(query))
+        log.debug('--- End SQL PAGE query ---')
+        
+        objects = [obj.to_json() for obj in query]
+        return {
+            "page": page_no,
+            "limit": limit,
+            "start": start,
+            "total": len(objects),
+            collection: objects
+        }
+        
+    def get_objects(self, model, query, primary_key = None):
+        '''Modify base query to get page of objects or single one.'''
+        cname = collection_name(model)
+        q = session().query(model)
+        if primary_key:
+            pkey = get_primary_key(model)
+            log.info('select one %s -> %s = "%s"' % (model.__tablename__, pkey, primary_key))
+            q = q.filter(pkey == primary_key)
+            log.debug('-- Begin SQL GET query --')
+            log.debug(str(q))
+            log.debug('-- End SQL GET query --')
+            o = q.first()
+            if not o:
+                raise mgen.error.NotFound().describe('object with %s="%s" was not found in %s' % (
+                    pkey, primary_key, cname))
             return {
-                "total": 1,
-                collection: [obj]
+                'total': 1,
+                cname: [q.one()]
             }
         else:
-            # get list of arguments
-            should_page, page_no, start, limit = page_args
-            if should_page:
-                query = query.offset(start).limit(limit)
-            # perform query and convert results to json
-            objects = [obj.to_json() for obj in query]
-            return {
-                "page": page_no,
-                "limit": limit,
-                "start": start,
-                "total": len(objects),
-                collection: objects
-            }
+            do_page, page, start, limit = self.page_arguments
+            qinfo = ''
+            if 'filter' in self.request.arguments:
+                qinfo += ','.join(['%s=%s' % (k, v) for k, v in self.request.arguments['filter']])
+            if do_page:
+                qinfo += 'page=%d, start=%d, limit=%d' % (page, start, limit)
+            log.info('select range %s -> %s' % (model.__tablename__, qinfo))
             
-    def restfull_get(self, model, single=None):
-        """RESTfull GET object or list of objects"""
-        log.debug('REST GET {0}{1}'.format(model, 
-                                           ", %s=%s" % single if single else ""))
-        return self.fetch(session().query(model), 
-                          self.page_arguments,
-                          single=single,
-                          collection=collection_name(model)
-                          )
-                          
-    def restfull_post(self, model):
-        """RESTfull POST to create a new object"""
-        params = self.request_params
-        log.debug('REST POST {0}, {1} properties'.format(model, len(params)))
-        new_inst = model()
-        for c in model.__table__.columns:
-            val = params.get(c.name, None)
-            if val != None:
-                log.debug("- %s=%s" % (c.name, val))
-                setattr(new_inst, c.name, val)
-        return new_inst
+            q = self.sort(mgen.model.Project, query)
+            q = self.filter(mgen.model.Project, query)
+            q = self.range(mgen.model.Project, query)
+            return self.fetch_page(q, cname)
+        
     
     def commit_changes(self, s = None):
         cls_name = self.__class__.__name__
@@ -216,6 +217,13 @@ class GenericModelHandler(BaseAPIRequestHandler):
                 'Failed to create new object in "{0}". Error: {1}'.format(
                 cls_name, ex)
             )
+            
+    def validate_params(self, params_list):
+        '''Check that given list of param names in present in current request'''
+        for pname in params_list:
+            if pname not in self.request_params:
+                raise mgen.error.BadRequest().describe('no value given for property "%s"' % pname)
+
 
 class Profiles(GenericModelHandler):
     """Profiles restfull interface"""
@@ -224,96 +232,203 @@ class Profiles(GenericModelHandler):
     @jsonify
     def get(self, oid=None):
         """GET list or single profile"""
-        return self.restfull_get(mgen.model.Profile,
-                                 single=None if oid is None else ('email', oid))
+        q = session().query(Profile)
+        return self.get_objects(mgen.model.Profile, q, oid)
 
-                          
+
 class Projects(GenericModelHandler):
     """"Projects restfull interface"""
+    
+    def query(self):
+        # select project.title, profile.name, project2profile.permission 
+        # from project join project2profile on project2profile.project = project.project_id 
+        # join profile on profile.email = project2profile.profile 
+        # where profile.email = @profile
+        return session().query(mgen.model.Project).join(mgen.model.project2profile,
+                                             mgen.model.project2profile.c.project==mgen.model.Project.project_id)\
+                                       .join(mgen.model.Profile,
+                                             mgen.model.Profile.email==mgen.model.project2profile.c.profile)\
+                                       .filter(mgen.model.Profile.email==self.current_profile.email)
+                                       
     
     @authenticated
     @jsonify
     def get(self, oid=None):
         """GET list or single project"""
-        return self.restfull_get(mgen.model.Project,
-                                 single=None if oid is None else ('project_id', oid))
+        log.debug('REST GET %s -> %s' % (self.request.path,
+            pprint.pformat(self.page_arguments) if oid is None else '%s=%s' % (
+                get_primary_key(mgen.model.Project), oid) ))
+        return self.get_objects(mgen.model.Project, self.query(), oid)
+
         
     @authenticated
     @jsonify
     def post(self):
+        log.debug("REST POST %s <- %s" % (self.request.path,
+                                          pprint.pformat(self.request_params,
+                                                         indent=2,
+                                                         width=160)))
         """POST to create a new project"""
+        self.validate_params([
+            'title', 'public_base_uri', 'options'
+        ])
         s = session()
-        project = self.restfull_post(mgen.model.Project)
-        project.project_id = uuid.uuid4()
+        project = mgen.model.Project(project_id=uuid.uuid4(),
+                                     title=self.request_params['title'],
+                                     public_base_uri=self.request_params['public_base_uri'])
         s.add(project)
-        project.members.append(self.current_profile)
+        
+        perm = mgen.model.ProjectPermission.grant(Permission.all(),
+                                                  project.project_id,
+                                                  self.current_profile.email)
+        s.add(perm)
+        
         self.commit_changes(s)
         self.set_status(201)
         
         log.debug('created new project: %s' % project.project_id)
-        return self.restfull_get(mgen.model.Project,
-                                 single=('project_id', project.project_id))
+        return self.get_objects(mgen.model.Project,
+                                self.query(),
+                                project.project_id)
                                  
                                  
 class Templates(GenericModelHandler):
     """"Templates restfull interface"""
     
+    def query(self):
+        # select template.name, project.title, profile.name, project2profile.permission
+        # from template join project on project.project_id = template.project_id 
+        # join project2profile on project2profile.project = project.project_id
+        # join profile on profile.email = project2profile.profile
+        # where profile.email = @profile
+        return session().query(mgen.model.Template).join(mgen.model.Project,
+                                                         mgen.model.Project.project_id==mgen.model.Template.project_id)\
+                                                   .join(mgen.model.project2profile,
+                                                         mgen.model.project2profile.c.project==mgen.model.Project.project_id)\
+                                                   .join(mgen.model.Profile,
+                                                         mgen.model.Profile.email==mgen.model.project2profile.c.profile)\
+                                                   .filter(mgen.model.Profile.email==self.current_profile.email)
+    
     @authenticated
     @jsonify
     def get(self, oid=None):
-        """GET list or single project"""
-        return self.restfull_get(mgen.model.Template,
-                                 single=None if oid is None else ('template_id', oid))
+        """GET list or single template"""
+        log.debug('REST GET %s -> %s' % (self.request.path,
+            pprint.pformat(self.page_arguments) if oid is None else '%s=%s' % (
+                get_primary_key(mgen.model.Template), oid) ))
+        return self.get_objects(mgen.model.Template, self.query(), oid)
         
     @authenticated
     @jsonify
     def post(self):
-        """POST to create a new project"""
+        log.debug("REST POST %s <- %s" % (self.request.path,
+                                          pprint.pformat(self.request_params,
+                                                         indent=2,
+                                                         width=160)))
+        self.validate_params([
+            'name', 'type', 'data'
+        ])
+        
+        validate_access(Permission.Write,
+                        self.request_params['project_id'],
+                        self.current_profile.email)
+        
         s = session()
-        t = self.restfull_post(mgen.model.Project)
-        t.template_id = uuid.uuid4()
-        s.add(t)
+        tmpl = mgen.model.Template(template_id=uuid.uuid4(),
+                                   name=self.request_params['name'],
+                                   type=self.request_params['type'],
+                                   project_id=self.request_params['project_id'],
+                                   data=self.request_params['data'])
+        
+        if tmpl.type not in mgen.generator.item_types:
+            raise mgen.BadRequest().describe('unsupported item type: %s. supported: %s' % (
+                tmpl.type, ', '.join(mgen.generator.item_types.keys())))
+                                   
+        ownership = mgen.model.project2profile(project=project.project_id,
+                                               profile=self.current_profile.email,
+                                               permission=Permission.Owner)
+        s.add(project)
+        s.add(ownership)
         self.commit_changes(s)
         self.set_status(201)
         
-        log.debug('created new template: %s' % t.template_id)
-        return self.restfull_get(mgen.model.Template,
-                                 single=('template_id', t.template_id))
+        log.debug('created new project: %s' % project.project_id)
+        return self.get_objects(mgen.model.Project,
+                                self.query(),
+                                project.project_id)
 
 
 class Items(GenericModelHandler):
     """Items restfull interface"""
     
+    def query(self):
+        return session().query(mgen.model.Item).join(mgen.model.Project,
+                                                     mgen.model.Project.project_id==mgen.model.Item.project_id)\
+                                               .join(mgen.model.project2profile,
+                                                     mgen.model.project2profile.c.project==mgen.model.Project.project_id)\
+                                               .join(mgen.model.Profile,
+                                                     mgen.model.Profile.email==mgen.model.project2profile.c.profile)\
+                                               .filter(mgen.model.Profile.email==self.current_profile.email)
+    
     @authenticated
     @jsonify
     def get(self, oid=None):
         """GET list or single project"""
-        return self.restfull_get(mgen.model.Item,
-                                 single=None if oid is None else ('item_id', oid))
+        log.debug('REST GET %s -> %s' % (self.request.path,
+            pprint.pformat(self.page_arguments) if oid is None else '%s=%s' % (
+                get_primary_key(mgen.model.Item), oid) ))
+        
+        return self.get_objects(mgen.model.Item, self.query(), oid)
         
     @authenticated
     @jsonify
     def post(self):
         """POST to create a new item"""
-        s = session()
-        i = self.restfull_post(mgen.model.Item)
-        i.item_id = uuid.uuid4()
-        if not i.uri_path:
-            i.uri_path = i.name.lower().replace(' ', '-').replace('/', '-').replace('\\', '-')
-        # publish_on -> publish_date
-        if i.published:
-            i.publish_date = datetime.datetime.now()
+        log.debug("REST POST %s <- %s" % (self.request.path,
+                                          pprint.pformat(self.request_params,
+                                                         indent=2,
+                                                         width=160)))
+        self.validate_params([
+            'name', 'type', 'body', 'published'
+        ])
+        def_uri_path = self.request_params['name'].lower().replace(' ', '-').replace('/', '-').replace('\\', '-')
+        uri_path = self.request_params.get('uri_path', def_uri_path)
+        
+        itm = mgen.model.Item(item_id=uuid.uuid4(),
+                              name=self.request_params['name'],
+                              type=self.request_params['type'],
+                              body=self.request_params['body'],
+                              uri_path=uri_path,
+                              published=self.request_params['published'])
+        
+        if itm.published:
+            # publish it now
+            itm.publish_date = datetime.datetime.now()
+        elif 'publish_date' in self.request_params:
+            itm.publish_date = datetime.datetime.strptime(self.request_params['publish_date'],
+                                                          '%d-%m-%Y')
         else:
-            i.publish_date = datetime.datetime.strptime('%d-%M-%Y',
-                                                        self.request_params["publish_on"])
-            if i.publish_date < datetime.datetime.now():
-                raise mgen.error.BadRequest().describe("publish_on can not be in past if you want to schedule")
+            raise mgen.error.BadRequest().describe('no value given for \
+                publish_date and item is not published now')
+        
+        s = session()
+        s.add(itm)
+        
+        if 'tags' in self.request_params:
+            for tag in self.request_params['tags']:
+                tag_name = tag.strip()
+                log.debug('applying tag "%s" to item "%s"' % (tag_name, itm.item_id))
+                atag = s.query(mgen.model.Tag).filter_by(tag=tag_name).first()
+                if not atag:
+                    log.debug(' -> it is a new tag, creating...')
+                    atag = mgen.model.Tag(tag=tag_name)
+                    s.add(atag)
+                # append (new) tag to list of tags
+                s.add(mgen.model.tag2item(tag=atag.tag, item=itm.item_id))
 
-        s.add(i)
         self.commit_changes(s)
         self.set_status(201)
         
-        log.debug('created new item: %s' % i.item_id)
-        return self.restfull_get(mgen.model.Item,
-                                 single=('item_id', i.item_id))
+        log.debug('created new item: %s' % itm.item_id)
+        return self.get_objects(mgen.model.Item, self.query(), itm.item_id)
         

@@ -8,14 +8,15 @@ import uuid
 import json
 import cgi
 import logging
-import enum
 
 import mgen
 import mgen.error
+import mgen.util
 
 import mgen.generator.template
 
 import sqlalchemy.exc
+
 
 from sqlalchemy import create_engine
 from sqlalchemy import asc, desc
@@ -28,13 +29,16 @@ from sqlalchemy.types import String
 from sqlalchemy.types import Integer
 from sqlalchemy.types import DateTime
 from sqlalchemy.types import Boolean
-from sqlalchemy.types import Enum
+
+from sqlalchemy.inspection import inspect
 
 from sqlalchemy.ext.mutable import Mutable
 
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm import validates
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import mapper
+from sqlalchemy.orm.session import object_session
 
 from sqlalchemy.ext.declarative import as_declarative
 from sqlalchemy.ext.declarative import declared_attr
@@ -43,6 +47,27 @@ from validate_email import validate_email
 
 log = logging.getLogger(__name__)
 
+
+#
+# Permissions 
+#
+class Permission(mgen.util.Enum):
+    Forbidden       = 0x000000
+    Read            = 0x000001
+    Edit            = 0x000010
+    Create          = 0x000100
+    Build           = 0x001000
+    Deploy          = 0x010000
+    GrantPermisson  = 0x100000
+    
+    @staticmethod
+    def all():
+        pp = 0
+        for p in Permission:
+            if p == Permission.Forbidden:
+                continue
+            pp |= p.value
+        return pp
 
 #
 # Core Data Objects Access API
@@ -180,6 +205,8 @@ class IDType(TypeDecorator):
         return value
 
     def process_result_value(self, value, dialect):
+        if value == None:
+            return None
         return uuid.UUID(value)
 
 
@@ -193,6 +220,8 @@ class JSONObject(TypeDecorator):
         return json.dumps(value)
 
     def process_result_value(self, value, dialect):
+        if value == None:
+            return None
         return json.loads(value.decode('utf-8') if isinstance(value, bytes) else value)
 
 
@@ -268,11 +297,36 @@ class BaseModel(object):
         return cls.__name__.lower()
 
 
-project_membership = Table("project_membership",
-                           BaseModel.metadata,
-                           Column('project', IDType, ForeignKey("project.project_id")),
-                           Column('profile', EscapedString(255), ForeignKey("profile.email")),
-                           Column('permissions', Integer))
+def get_primary_key(cls, idx=0):
+    '''Returns name of the primary key of this model by index. Returns first key by default'''
+    return cls.__mapper__.primary_key[idx]
+
+
+# Many-to-Many link of profiles to projects and permission in them
+project2profile = Table("project2profile",
+                        BaseModel.metadata,
+                        Column('project', IDType, ForeignKey("project.project_id"), primary_key=True),
+                        Column('profile', EscapedString(255), ForeignKey("profile.email"), primary_key=True),
+                        Column('permission', Integer))
+
+
+class ProjectPermission(object):
+    '''Permission for a profile to do something with project'''
+    
+    @staticmethod
+    def grant(p, project_id, profile_email):
+        '''Grants a permission :p to a profile with :profile_email in project with :project_id'''
+        val = p.value if isinstance(p, Permission) else p
+        perm = ProjectPermission()
+        perm.project = project_id
+        perm.profile = profile_email
+        perm.permission = val
+        log.debug('granted permission "%d" to "%s" for project: %s' % (
+            val, profile_email, project_id))
+        return perm
+    
+# map model class to references table
+mapper(ProjectPermission, project2profile)
 
 
 class Profile(GenericModelMixin, BaseModel):
@@ -281,8 +335,8 @@ class Profile(GenericModelMixin, BaseModel):
     email = Column(EscapedString(255), primary_key=True)
     name = Column(EscapedString(255))
     picture = Column(EscapedString(1024))
-    projects = relationship("Project", 
-                            secondary=project_membership,
+    projects = relationship("Project",
+                            secondary=project2profile,
                             back_populates="members")
                             
     @validates('id')
@@ -307,7 +361,7 @@ class Project(GenericModelMixin, BaseModel):
     public_base_uri = Column(EscapedString(1024))
     options = Column(MutationDict.as_mutable(JSONObject))
     members = relationship("Profile", 
-                           secondary=project_membership,
+                           secondary=project2profile,
                            back_populates="projects")
 
     def to_json(self):
@@ -316,9 +370,25 @@ class Project(GenericModelMixin, BaseModel):
             'title': self.title,
             'public_base_uri': self.public_base_uri,
             'members': [m.email for m in self.members],
-            'slugs': [s.slud_id for s in self.slugs],
-            'templates': [t.template_id for t in self.templates]
+            'slugs': [s.slug_id for s in self.slugs],
+            'templates': [t.template_id for t in self.templates],
+            'items': [i.item_id for i in self.items]
         }
+
+    def get_permission(self, email):
+        '''Returns highest Permission available to given profile with :email in this project'''
+        q = session().query(project2profile).filter(project2profile.c.profile==email)\
+                                            .filter(project2profile.c.project==self.project_id)\
+                                           .order_by(project2profile.c.permission)
+        if q.count() == 0:
+            return Permission.Forbidden
+
+        return mgen.util.EnumMask(Permission, q.first().permission)
+        
+    def grant_permission(self, p, email):
+        '''Grants specified Permission :p to profile with :email'''
+        ProjectPermission.grant(p, self.project_id, email)
+        
 
 
 class Slug(GenericModelMixin, BaseModel):
@@ -378,6 +448,10 @@ class Item(GenericModelMixin, BaseModel):
     body = Column(Text)
     published = Column(Boolean)
     publish_date = Column(DateTime)
+    
+    project_id = Column(IDType, ForeignKey('project.project_id'))
+    project = relationship(Project, backref=backref('items', lazy='dynamic'))
+    
     tags = relationship("Tag", 
                        secondary=tag2item,
                        back_populates="items")
@@ -385,7 +459,7 @@ class Item(GenericModelMixin, BaseModel):
     def to_json(self):
         return {
             'id': self.item_id,
-            'type': self.type.name if self.type is not None else None,
+            'type': self.type,
             'name': self.name,
             'uri_path': self.uri_path,
             'body': self.body,
@@ -401,7 +475,7 @@ class Template(GenericModelMixin, BaseModel):
     template_id = Column(IDType, primary_key=True)
     name = Column(EscapedString(255))
     type = Column(EscapedString(255))
-    data = Column(JSONObject)
+    data = Column(EscapedString)
     
     project_id = Column(IDType, ForeignKey('project.project_id'))
     project = relationship(Project, backref=backref('templates', lazy='dynamic'))
