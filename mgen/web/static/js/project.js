@@ -97,6 +97,11 @@ $(document).ready(function() {
         dateFormat: "dd-mm-yy"
     })
     
+    $('#new-item-wizard').wizard({
+        btnNext: 'new-item-next',
+        btnPrev: 'new-item-back'
+    })
+    
     // refresh project details on page load
     refreshProjectItems(projectId)
     refreshProjectTemplates(projectId)

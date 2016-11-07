@@ -61,7 +61,8 @@ class EnumMask(object):
             self._enum,
             self._value
         )
- 
+
+
 class Enum(enum.Enum):
     '''Enum based on oldschool bitmask'''
     
