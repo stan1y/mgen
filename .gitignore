@@ -1,2 +1,7 @@
 *.pyc
+*.egg-info
+*.sqlite
+*.slug
+*.log*
 mgen/__pycache__
+mgen-env
