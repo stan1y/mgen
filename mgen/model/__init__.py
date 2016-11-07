@@ -329,6 +329,18 @@ class ProjectPermission(object):
 mapper(ProjectPermission, project2profile)
 
 
+class ProfileStore(dict):
+  '''Proxy to access cached profile json'''
+  
+  #  @param name values name to fetch str
+  #  raises ImportDataError if value missing for name
+  def __getattr__ (self, name):
+        try:
+            return self[name]
+        except KeyError:
+            raise ValueError('Key "%s" was not found in ProfileStore' % name)
+
+
 class Profile(GenericModelMixin, BaseModel):
     '''Base class represending local profile for security principals'''
     
@@ -349,9 +361,12 @@ class Profile(GenericModelMixin, BaseModel):
             "email": self.email,
             "name": self.name,
             "picture": self.picture,
-            "projects": [p.id for p in self.projects]
+            "projects": [p.project_id for p in self.projects]
         }
-
+        
+    @staticmethod
+    def from_json(data):
+        return ProfileStore(data)
 
 class Project(GenericModelMixin, BaseModel):
     '''The project to build a static website'''

@@ -87,7 +87,8 @@
     
     Wizard.prototype.forward = function() {
         if (this.currentStepIdx >= this.steps.length - 1) {
-            // at the last step
+            // at the last step, close dialog
+            this.el.parents('.modal').modal('hide')
             return
         }
         this.currentStepIdx += 1
@@ -96,8 +97,8 @@
     
     Wizard.prototype.back = function() {
         if (this.currentStepIdx == 0) {
-            // at the first step
-            return
+            // at the first step, close dialog
+            this.el.parents('.modal').modal('hide')
         }
         this.currentStepIdx -= 1
         this.switch(this.currentStepIdx)

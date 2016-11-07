@@ -8,9 +8,11 @@ import json
 import logging
 
 import tornado.web
+
 import mgen.model
 import mgen.error
 import mgen.util
+
 import sqlalchemy.orm.exc
 
 
@@ -34,7 +36,7 @@ class BaseRequestHandler(tornado.web.RequestHandler):
         '''Returns profile id (email) stored in secure cookie'''
         profile = self.get_secure_cookie("mgen-auth-profile")
         if profile:
-            return profile.decode('utf-8')
+            return mgen.model.ProfileStore(json.loads(profile.decode('utf-8')))
         return None
     
     @property
@@ -42,10 +44,7 @@ class BaseRequestHandler(tornado.web.RequestHandler):
         '''Returns a Profile model of the current user'''
         if hasattr(self, '__cached_profile'):
             return getattr(self, '__cached_profile')
+        self.__cached_profile = self.get_profile()
         
-        profile_email = self.get_profile()
-        log.debug('loading profile: %s' % profile_email)
-        self.__cached_profile = mgen.model.session().query(
-            mgen.model.Profile).filter_by(email=profile_email).first()
-            
+        log.debug('current profile: %s' % self.__cached_profile.email)
         return self.__cached_profile

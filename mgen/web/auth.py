@@ -23,6 +23,60 @@ from mgen.model import session
 log = logging.getLogger(__name__)
 
 
+#
+# Authentication utilities
+#
+                
+def authenticated(method):
+    """Decorate methods with this to require that the user be logged in."""
+    
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        if not self.current_user or not self.current_profile:
+            log.warn('not authorized request on [%s]' % self.request)
+            if self.request.method in ("GET", "HEAD") and not self.request.path.startswith('/api'):
+                # redirect UI requests
+                login_url = urlsplit(self.get_login_url())
+                if not login_url.query:
+                    if login_url.scheme:
+                        # if login url is absolute, make next absolute too
+                        next_url = self.request.full_url()
+                    else:
+                        next_url = self.request.uri
+                    login_url = login_url._replace(query=urlencode(dict(next=next_url)))
+                return self.redirect(login_url.geturl())
+                
+            # throw error for non-UI calls
+            raise mgen.error.Unauthorized().describe("not a user")
+        return method(self, *args, **kwargs)
+    return wrapper
+
+
+def validate_access(p, project_id, profile_email):
+    '''
+    Returns True if :profile_email has at least specified permission :p in 
+    project with :project_id. Otherwise returns False.
+    '''
+    q = session().query(mgen.model.project2profile)
+    q = q.filter_by(project=project_id, profile=profile_email)
+    q = q.filter(mgen.model.project2profile >= p.value)
+    log.debug('-- Begin SQL PERMISSIONS query --')
+    log.debug(str(q))
+    log.debug('-- End SQL PERMISSIONS query --')
+    access = q.count() > 0
+    if not access:
+        log.warn('access denied to project "%s"' % project_id)
+        return False
+    else:
+        log.debug('access granted to project "%s", permission >= %s' % (
+            project_id, p))
+        return True
+        
+#
+# Auth Request Handlers
+#
+
+
 class Login(BaseRequestHandler):
     '''Allows to select external OAuth provider'''
     
@@ -72,7 +126,8 @@ class GoogleOAuth2Login(BaseRequestHandler,
             
             self.set_secure_cookie('mgen-auth-principal', json.dumps(user, 
                                                                      cls=mgen.util.JSONEncoder))
-            self.set_secure_cookie('mgen-auth-profile', profile.email)
+            self.set_secure_cookie('mgen-auth-profile', json.dumps(profile, 
+                                                                   cls=mgen.util.JSONEncoder))
             log.debug('session cookies saved')
             self.redirect('/')
             
@@ -84,53 +139,3 @@ class GoogleOAuth2Login(BaseRequestHandler,
                 scope=['profile', 'email'],
                 response_type='code',
                 extra_params={'approval_prompt': 'auto'})
-
-
-#
-# Authentication utilities
-#
-                
-def authenticated(method):
-    """Decorate methods with this to require that the user be logged in."""
-    
-    @functools.wraps(method)
-    def wrapper(self, *args, **kwargs):
-        if not self.current_user or not self.current_profile:
-            log.warn('not authorized request on [%s]' % self.request)
-            if self.request.method in ("GET", "HEAD") and not self.request.path.startswith('/api'):
-                # redirect UI requests
-                login_url = urlsplit(self.get_login_url())
-                if not login_url.query:
-                    if login_url.scheme:
-                        # if login url is absolute, make next absolute too
-                        next_url = self.request.full_url()
-                    else:
-                        next_url = self.request.uri
-                    login_url = login_url._replace(query=urlencode(dict(next=next_url)))
-                return self.redirect(login_url.geturl())
-                
-            # throw error for non-UI calls
-            raise mgen.error.Unauthorized().describe("not a user")
-        return method(self, *args, **kwargs)
-    return wrapper
-
-
-def validate_access(p, project_id, profile_email):
-    '''
-    Returns True if :profile_email has at least specified permission :p in 
-    project with :project_id. Otherwise returns False.
-    '''
-    q = session().query(mgen.model.project2profile)
-    q = q.filter_by(project=project_id, profile=profile_email)
-    q = q.filter(mgen.model.project2profile >= p.value)
-    log.debug('-- Begin SQL PERMISSIONS query --')
-    log.debug(str(q))
-    log.debug('-- End SQL PERMISSIONS query --')
-    access = q.count() > 0
-    if not access:
-        log.warn('access denied to project "%s"' % project_id)
-        return False
-    else:
-        log.debug('access granted to project "%s", permission >= %s' % (
-            project_id, p))
-        return True
