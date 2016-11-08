@@ -39,6 +39,16 @@
         return this
     }
     
+    Wizard.prototype.reset = function() {
+        this.el.parent('form')[0].reset()
+        this.steps.hide()
+        this.currentStepIdx = 0
+        this.currentStep = $(this.el.find('div.step.first')[0])
+        this.currentStep.show()
+        this._updateBtns()
+        return this
+    }
+    
     Wizard.prototype._updateBtns = function() {
         
         if (this.currentStepIdx >= this.steps.length - 1) {
@@ -83,12 +93,22 @@
         }
         this.currentStep = $(nextStep)
         this._updateBtns()
+        $(this).trigger('switched')
+    }
+    
+    Wizard.prototype.atTheEnd = function() {
+        return (this.currentStepIdx >= this.steps.length - 1)
+    }
+    
+    Wizard.prototype.atTheBegining = function() {
+        return (this.currentStep == 0)
     }
     
     Wizard.prototype.forward = function() {
-        if (this.currentStepIdx >= this.steps.length - 1) {
+        if (this.atTheEnd()) {
             // at the last step, close dialog
             this.el.parents('.modal').modal('hide')
+            $(this).trigger('finished')
             return
         }
         this.currentStepIdx += 1
@@ -96,16 +116,18 @@
     }
     
     Wizard.prototype.back = function() {
-        if (this.currentStepIdx == 0) {
+        if (this.atTheBegining()) {
             // at the first step, close dialog
             this.el.parents('.modal').modal('hide')
+            $(this).trigged('canceled')
+            return
         }
         this.currentStepIdx -= 1
         this.switch(this.currentStepIdx)
     }
  
     $.fn.wizard = function(options) {
-        return new Wizard(this, options)   
+        return $(new Wizard(this, options))
     }
     
     $.fn.animateCss = function (animationName) {

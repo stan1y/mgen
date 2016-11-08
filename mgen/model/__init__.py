@@ -285,6 +285,19 @@ class MutationList(Mutable, list):
 #
 # MGEN Core Objects
 #
+# Profile:   User details model linked with external auth principal by email
+#
+# Project:   Top level model with linked permissions per Profile
+#
+# Template:  A template keeps formatting information used to generate html with set
+#            of variables available to render and specified by caller
+#
+# Page:      A basic rendering item with user defined input, resources and a Template producing html.
+#            There are several types of pages with different sets of predefined inputs 
+#            and possible locations/paths.
+#
+# Item:      A rendering item is an input parameters for metadata defined in Page
+#
 
 
 @as_declarative()
@@ -499,9 +512,22 @@ class Template(GenericModelMixin, BaseModel):
         return {
             'id': self.template_id,
             'name': self.name,
-            'type': self.type.name if self.type is not None else None,
+            'type': self.type,
             'data': self.data
         }
+
+
+class Page(GenericModelMixin, BaseModel):
+    
+    page_id = Column(IDType, primary_key=True)
+    path    = Column(EscapedString(255))
+    input   = Column(MutationDict.as_mutable(JSONObject))
+    
+    template_id = Column(IDType, ForeignKey("template.template_id"))
+    template    = relationship(Template, backref=backref('pages'))
+    
+    project_id = Column(IDType, ForeignKey("project.project_id"))
+    project    = relationship(Project, backref=backref('pages'))
 
 #
 # MGEN Data Storage Sessions

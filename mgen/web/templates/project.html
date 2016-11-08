@@ -10,7 +10,8 @@
 <input type="hidden" id="project-id" value="{{ escape(project.project_id.hex) }}" />
 <div class="container">
   
-  {% include "dlg/new-item.html" %}
+  {% include "dlg/new-item-wizard.html" %}
+  {% include "dlg/new-template-wizard.html" %}
   
   <div class="page-header">
     <h1 id="project-title">{{ escape(project.title) }}</h1>
@@ -74,6 +75,8 @@
     
   </p>
   
+  <hr />
+  
   {% if allow_create %}
   <!-- Begin items menu -->
   <div class="btn-group" role="group" aria-label="...">
@@ -87,15 +90,14 @@
   </div>
   {% end %}
   
-  <hr />
-  
   <!-- Begin items grid -->
-  <img class="progress-small" id="progress-items" src="/static/img/01-progress.gif" />
-  
-  <div id="project-items" class="container-fluid">
+  <div>
+    <div id="project-items" class="container-fluid">
+    </div>
   </div>
   
   <br/>
+  <hr />
   
   {% if allow_create %}
   <!-- Begin sequences menu -->
@@ -109,18 +111,17 @@
     </button>
   </div>
   
-  <hr/>
   {% end %}
   
   <!-- Begin sequences grid -->
-  <img class="progress-small" id="progress-seq" src="/static/img/01-progress.gif" />
-  
   <div id="project-seq" class="container-fluid">
   </div>
   
   <br />
+  <hr />
     
   {% if allow_create %}
+  
   <!-- Begin templates menu -->
   <div class="btn-group" role="group" aria-label="...">
     <button id="project-add-tmpl" class="btn btn-default">
@@ -132,16 +133,16 @@
     </button>
   </div>
   
-  <hr/>
   {% end %}
   
   <!-- Begin templates grid -->
-  <img class="progress-small" id="progress-tmpl" src="/static/img/01-progress.gif" />
-  
-  <div id="project-templates" class="container-fluid">
+  <div>
+    <div id="project-templates" class="container-fluid">
+    </div>
   </div>
   
   <br />
+  <hr />
   
   {% if allow_create %}
   <!-- Begin pages menu -->
@@ -155,11 +156,9 @@
     </button>
   </div>
   
-  <hr />
   {% end %}
   
   <!-- Begin pages grid -->
-  <img class="progress-small" id="progress-pages" src="/static/img/01-progress.gif" />
   <div id="project-pages" class="container-fluid">
   </div>
   

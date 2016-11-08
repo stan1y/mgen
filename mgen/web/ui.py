@@ -51,3 +51,29 @@ class Project(BaseRequestHandler):
                            allow_deploy=(Permission.Deploy & p),
                            is_owner=(Permission.GrantPermisson & p))
                            
+class Template(BaseRequestHandler):
+    pass
+
+class Item(BaseRequestHandler):
+    pass
+
+class Page(BaseRequestHandler):
+    pass
+
+class TemplatePreview(BaseRequestHandler):
+    '''Read template from body and render it with provided parameters'''
+    
+    @authenticated
+    def post(self):
+        tmpl_type = self.get_query_argument('type', 'builtin')
+        params = json.loads(self.get_query_argument('params', '{}'))
+        
+        if tmpl_type not in mgen.generator.template.template_types:
+            raise mgen.error.BadRequest().describe("unsupported template type: %s" % tmpl_type)
+        
+        tmpl_body = self.request.body.decode('utf-8')
+        generator = mgen.generator.template.Template(tmpl_type, tmpl_body)
+        self.write(generator.render(params))
+        
+        
+        

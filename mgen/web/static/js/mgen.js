@@ -2,201 +2,237 @@
  * Client-side API access library
  */
 
-var MGEN = {} || MGEN;
-
-
-MGEN.DataStore = function(collectionName) {
-    this.data = []
-    this.collectionName = collectionName
-    this.apiPath = '/api/' + collectionName
+/*
+ * MGEN Wizard jDataQuery plugin
+ */
+ 
+(function ( $ ) {
     
-    // default page settings
-    this.paging = {
-        page: 1,
-        start: 0,
-        limit: 50
+    /*
+     * ErrorDialog
+     */
+    
+    var ErrorDialog = function(title, message, msgId) {
+        // hide all open modals
+        $('.modal.fade.in').modal('hide')
+        this.msgId = msgId
+        this.title = title
+        this.message = message
+        try {
+            var err = JSON.parse(message)
+            this.title = 'Error Occured: ' + err.exception
+            this.message = "Reason:\n" + err.reason + "\n" +
+                      "Traceback:\n" +
+                      err.traceback.join("\n")
+                      
+        }
+        catch(SyntaxError) {
+            console.log("received error is not well formed exception")
+        }
     }
     
-    this.total = NaN
-}
-
-MGEN.DataStore.prototype.enablePaging = function (page, start, limit) {
-    if (page !== undefined 
-        && start !== undefined 
-        && limit !== undefined) {
-    
-        this.paging.page = page
-        this.paging.start = start
-        this.paging.limit = limit
-    }
-    else {
-        this.paging.page = 1
-        this.paging.start = 0
-        this.paging.limit = 50
-    }
-        
-}
-
-MGEN.DataStore.prototype.disablePaging = function () {
-    this.paging = null
-}
-
-MGEN.displayErrorDialog = function(title, message, msgId) {
-    if (msgId === undefined) {
-        msgId = "error-dialog"
-    }
-
-    // hide all open modals
-    $('.modal.fade.in').modal('hide')
-    
-    try {
-        var err = JSON.parse(message)
-        title = 'Error Occured: ' + err.exception
-        message = "Reason:\n" + err.reason + "\n" +
-                  "Traceback:\n" +
-                  err.traceback.join("\n")
-                  
-    }
-    catch(SyntaxError) {
-        console.log("received error is not well formed exception")
-    }
-    
-    
-    $('body').prepend(
-        $('<div id="' + msgId + '" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="' + msgId + '-label">' +
-            '<div class="modal-dialog" role="document">' +
-                '<div class="modal-content">' +
-                    '<div class="modal-header">' +
-                        '<button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
-                            '<span aria-hidden="true">&times;</span>' +
-                        '</button>' +
-                        '<h4 class="modal-title" id="' + msgId + '-label">' + title + '</h4>' +
+    ErrorDialog.prototype.show = function() {
+        $('body').prepend(
+            $('<div id="' + this.msgId + '" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="' + this.msgId + '-label">' +
+                '<div class="modal-dialog" role="document">' +
+                    '<div class="modal-content">' +
+                        '<div class="modal-header">' +
+                            '<button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
+                                '<span aria-hidden="true">&times;</span>' +
+                            '</button>' +
+                            '<h4 class="modal-title" id="' + this.msgId + '-label">' + this.title + '</h4>' +
+                        '</div>' +
+                    '<div class="modal-body">' +
+                        '<pre>' + this.message + '</pre>' +
                     '</div>' +
-                '<div class="modal-body">' +
-                    '<pre>' + message + '</pre>' +
+                    '<div class="modal-footer">' +
+                        '<button id="error-dlg-dismiss" class="btn btn-default" data-dismiss="modal">Dismiss</button>' +
+                    '</div>' +
                 '</div>' +
-                '<div class="modal-footer">' +
-                    '<button id="error-dlg-dismiss" class="btn btn-default" data-dismiss="modal">Dismiss</button>' +
-                '</div>' +
-            '</div>' +
-        '</div>')
-    )
-        
-    $('#' + msgId).modal()
-}
-
-MGEN.DataStore.prototype.update = function(callback) {
-    var self = this
-    $.ajax(this.apiPath, {
-        method: "GET",
-        dataType: "json",
-        data: this.paging,
-        error: function(xhr, type, ex) {
-            MGEN.displayErrorDialog(ex, xhr.responseText)
-        },
-        success: function(data) {
-            if (data.page !== undefined 
-             && data.start !== undefined 
-             && data.limit !== undefined) {
-                // paging is reported by server
-                self.paging.page = data.page
-                self.paging.start = data.start
-                self.paging.limit = data.limit
-            }
-            else {
-                self.paging = null
-            }
-            self.total = data.total
-            self.data = data[self.collectionName]
-            $(self).trigger('change', self)
-            if (callback)
-                callback.call(this, self.data)
-        }
-    })
-}
-
-MGEN.DataStore.prototype.get = function(objID, callback) {
-    var self = this
-    $.ajax(this.apiPath + "/" + objID, {
-        method: "GET",
-        dataType: "json",
-        error: function(xhr, type, ex) {
-            MGEN.displayErrorDialog(ex, xhr.responseText)
-        },
-        success: function(data) {
-            // assume single item returned
-            if (data.total == 1 && callback !== undefined) {
-                callback.call(this, data[self.collectionName][0])
-            }
-        }
-    })
-}
-
-
-MGEN.DataStore.prototype.add = function(obj, callback) {
-    var self = this
-    $.ajax(this.apiPath, {
-        method: "POST",
-        dataType: "json",
-        data: JSON.stringify(obj),
-        error: function(xhr, type, ex) {
-            MGEN.displayErrorDialog(ex, xhr.responseText)
-        },
-        success: function(data) {
-            // assume single item returned
-            // pass it to caller's callback
-            if (data.total == 1 && callback !== undefined) {
-                callback.call(this, data[self.collectionName][0])
-            }
-                
-        }
-    })
-}
-
-MGEN.Query = function(collectionName) {
-    this.collectionName = collectionName
-    this.apiPath = '/api/' + this.collectionName
-    this.flt = {}
-    this.data = []
-}
-
-MGEN.DataStore.prototype.query = function() {
-    return new MGEN.Query(this.collectionName)
-}
-
-MGEN.Query.prototype.filter = function(flt) {
-    this.flt = flt
-    return this
-}
-
-MGEN.Query.prototype.fetch = function(callback, refresh = false) {
-    if (this.data.length > 0 && !refresh) {
-        callback.call(this, this.data)
-        return this.data
+            '</div>')
+        )
+            
+        $('#' + this.msgId).modal()
+        return this
     }
     
-    var self = this
-    return $.ajax(this.apiPath, {
-        method: "GET",
-        dataType: "json",
-        data: {filter: this.flt},
-        error: function(xhr, type, ex) {
-            MGEN.displayErrorDialog(ex, xhr.responseText)
-        },
-        success: function(data) {
-            self.total = data.total
-            self.data = data[self.collectionName]
-            $(self).trigger('loaded', self)
-            if (callback)
-                callback.call(this, self.data)
+    $.fn.showErrorDialog = function(title, message, msgId) {
+        return new ErrorDialog(title, message, msgId).show()
+    }
+    
+    /*
+     * DataDataQuery
+     */
+    
+    var DataQuery = function(collectionName) {
+        this.collectionName = collectionName
+        this.apiPath = '/api/' + this.collectionName
+        this.flt = {}
+        this.paging = {}
+        this.data = []
+    }
+    
+    DataQuery.prototype.filter = function(flt) {
+        this.flt = flt
+        return this
+    }
+    
+    DataQuery.prototype.order_by = function() {
+    
+    }
+    
+    DataQuery.prototype.range = function() {
+        
+    }
+    
+    DataQuery.prototype.page = function (page, start, limit) {
+        if (page !== undefined 
+            && start !== undefined 
+            && limit !== undefined) {
+        
+            this.paging.page = page
+            this.paging.start = start
+            this.paging.limit = limit
         }
-    })
-}
-
-MGEN.Query.prototype.order_by = function() {
+        else {
+            this.paging.page = 1
+            this.paging.start = 0
+            this.paging.limit = 50
+        }
+    }
     
-}
-
-MGEN.Query.prototype.range = function() {
+    DataQuery.prototype.fetch = function(callback) {
+        var self = this
+        
+        return $.ajax(this.apiPath, {
+            method: "GET",
+            dataType: "json",
+            data: {
+                filter: this.flt,
+                page: self.paging.page,
+                start: self.paging.start,
+                limit: self.paging.limit
+            },
+            error: function(xhr, type, ex) {
+                $().showErrorDialog(ex, xhr.responseText)
+            },
+            success: function(data) {
+                self.total = data.total
+                self.data = data[self.collectionName]
+                $(self).trigger('loaded', self)
+                if (callback)
+                    callback.call(self, self.data)
+            }
+        })
+    }
     
-}
+    DataQuery.prototype.one = function(callback) {
+        var self = this
+        return $.ajax(this.apiPath, {
+            method: "GET",
+            dataType: "json",
+            data: {
+                filter: this.flt,
+                page: self.paging.page,
+                start: self.paging.start,
+                limit: self.paging.limit
+            },
+            error: function(xhr, type, ex) {
+                $().showErrorDialog(ex, xhr.responseText)
+            },
+            success: function(data) {
+                // assume single object in answer
+                if (callback)
+                    callback.call(self, data[self.collectionName][0])
+            }
+        })
+    }
+    
+    $.fn.dataQuery = function(collectionName) {
+        return new DataQuery(collectionName)
+    }
+    
+    /*
+     * ItemsContainer
+     */
+     
+    var ItemsContainer = function(containerId, options) {
+        this.options = $.extend({
+            emptyMsg: 'Nothing found.',
+            rowTemplate: '<div class="row"></div>',
+            itemsPerRow: 3,
+            defaultRenderFunc: function(item) {
+                return $('<pre>' + item + '</pre>')
+            }
+        }, options)
+        
+        this.containerId = containerId
+        this.progressId = "img-" + containerId + "-progress"
+        this.cnt = $('#' + containerId)
+        this.source = null
+        $('<img id="' + this.progressId +
+            '" class="progress-small" id="progress-tmpl" src="/static/img/01-progress.gif" style="display: none;" />').insertBefore(
+                this.cnt.parent())
+    }
+    
+    ItemsContainer.prototype.render = function(items, renderFunc) {
+        var currentRow = $(this.options.rowTemplate),
+            itemIdx = 0,
+            self = this
+        
+        if (!renderFunc)
+            renderFunc = this.options.defaultRenderFunc
+        
+        this.cnt.empty()
+        this.cnt.append(currentRow)
+        
+        $(items).each(function(idx, i) {
+            if (idx % self.options.itemsPerRow == 0) {
+                currentRow = $(self.options.rowTemplate)
+                self.cnt.append(currentRow)
+            }
+            currentRow.append(renderFunc(i))
+        })
+        
+        if (items.length == 0) {
+            this.cnt.append($(
+                '<div class="row"><div class="col-xs-6 col-md-4"><h3>' +
+                this.options.emptyMsg +
+                '</h3></div></div>'))
+        }
+    }
+    
+    ItemsContainer.prototype.setDefaultRenderFunc = function(renderFunc) {
+        this.options.defaultRenderFunc = renderFunc
+    }
+    
+    ItemsContainer.prototype.setSource = function(query) {
+        this.source = query
+        query.target = this
+        $(this.source).on('loaded', function() {
+            this.target.render(this.data)
+        })
+    }
+    
+    ItemsContainer.prototype.update = function() {
+        if (this.source) {
+            this.showProgress()
+            this.source.fetch(function() {
+                this.target.hideProgress()
+            })
+        }
+    }
+    
+    ItemsContainer.prototype.showProgress = function() {
+        $('#' + this.progressId).show()
+    }
+    
+    ItemsContainer.prototype.hideProgress = function() {
+        $('#' + this.progressId).hide()
+    }
+    
+    $.fn.itemsContainer = function(containerId, options) {
+        return new ItemsContainer(containerId, options)
+    }
+
+}( jQuery ));

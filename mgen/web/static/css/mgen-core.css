@@ -40,11 +40,13 @@ body > .container {
 }
 
 .progress {
+  position: absolute;
   width: 800px;
   height: 600px;
 }
 
 .progress-small {
-  width: 150px;
-  height: 100px;
+  position: absolute;
+  width: 400px;
+  height: 300px;
 }

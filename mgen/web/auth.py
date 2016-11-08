@@ -50,27 +50,6 @@ def authenticated(method):
             raise mgen.error.Unauthorized().describe("not a user")
         return method(self, *args, **kwargs)
     return wrapper
-
-
-def validate_access(p, project_id, profile_email):
-    '''
-    Returns True if :profile_email has at least specified permission :p in 
-    project with :project_id. Otherwise returns False.
-    '''
-    q = session().query(mgen.model.project2profile)
-    q = q.filter_by(project=project_id, profile=profile_email)
-    q = q.filter(mgen.model.project2profile >= p.value)
-    log.debug('-- Begin SQL PERMISSIONS query --')
-    log.debug(str(q))
-    log.debug('-- End SQL PERMISSIONS query --')
-    access = q.count() > 0
-    if not access:
-        log.warn('access denied to project "%s"' % project_id)
-        return False
-    else:
-        log.debug('access granted to project "%s", permission >= %s' % (
-            project_id, p))
-        return True
         
 #
 # Auth Request Handlers

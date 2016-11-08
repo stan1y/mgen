@@ -85,6 +85,8 @@ def run():
     		(r"/api/projects/(?P<oid>[0-9a-zA-Z]+)",  mgen.web.api.Projects),
     		(r"/api/templates",                       mgen.web.api.Templates),
     		(r"/api/templates/(?P<oid>[0-9a-zA-Z]+)", mgen.web.api.Templates),
+    		(r"/api/pages",                           mgen.web.api.Pages),
+    		(r"/api/pages/(?P<oid>[0-9a-zA-Z]+)",     mgen.web.api.Pages),
     		(r"/api/items",                           mgen.web.api.Items),
     		(r"/api/items/(?P<oid>[0-9a-zA-Z]+)",     mgen.web.api.Items),
     		
@@ -92,6 +94,9 @@ def run():
     		
     		(r"/",                                    mgen.web.ui.Overview),
     		(r"/project/(?P<oid>[0-9a-zA-Z]+)",       mgen.web.ui.Project),
+    		(r"/preview/template",                    mgen.web.ui.TemplatePreview),
+    		(r"/template/(?P<oid>[0-9a-zA-Z]+)",      mgen.web.ui.Template),
+    		(r"/page/(?P<oid>[0-9a-zA-Z]+)",          mgen.web.ui.Page),
     	],
     	
     	

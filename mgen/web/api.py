@@ -27,7 +27,7 @@ from mgen.model import session, get_primary_key
 from mgen.model import Permission
 
 from mgen.web import BaseRequestHandler
-from mgen.web.auth import authenticated, validate_access
+from mgen.web.auth import authenticated
 
 
 log = logging.getLogger(__name__)
@@ -188,6 +188,8 @@ class GenericModelHandler(BaseAPIRequestHandler):
             qinfo = ''
             if 'filter' in self.request.arguments:
                 qinfo += ','.join(['%s=%s' % (k, v) for k, v in self.request.arguments['filter']])
+            else:
+                qinfo = 'everything'
             if do_page:
                 qinfo += 'page=%d, start=%d, limit=%d' % (page, start, limit)
             log.info('select range %s -> %s' % (model.__tablename__, qinfo))
@@ -221,7 +223,13 @@ class GenericModelHandler(BaseAPIRequestHandler):
     def validate_params(self, params_list):
         '''Check that given list of param names in present in current request'''
         for pname in params_list:
+            not_none = False
+            if isinstance(pname, tuple):
+                pname, not_none = pname
             if pname not in self.request_params:
+                raise mgen.error.BadRequest().describe('missing property "%s"' % pname)
+            val = self.request_params[pname]
+            if not_none and (val == None or len(val) == 0):
                 raise mgen.error.BadRequest().describe('no value given for property "%s"' % pname)
 
 
@@ -290,7 +298,64 @@ class Projects(GenericModelHandler):
         return self.get_objects(mgen.model.Project,
                                 self.query(),
                                 project.project_id)
-                                 
+
+
+class Pages(GenericModelHandler):
+    
+    def query(self):
+        return session().query(mgen.model.Page).join(mgen.model.Project,
+                                                         mgen.model.Project.project_id==mgen.model.Page.project_id)\
+                                                   .join(mgen.model.project2profile,
+                                                         mgen.model.project2profile.c.project==mgen.model.Project.project_id)\
+                                                   .join(mgen.model.Profile,
+                                                         mgen.model.Profile.email==mgen.model.project2profile.c.profile)\
+                                                   .filter(mgen.model.Profile.email==self.current_profile.email)
+    
+    @authenticated
+    @jsonify
+    def get(self, oid=None):
+        log.debug('REST GET %s -> %s' % (self.request.path,
+            pprint.pformat(self.page_arguments) if oid is None else '%s=%s' % (
+                get_primary_key(mgen.model.Page), oid) ))
+        return self.get_objects(mgen.model.Page, self.query(), oid)
+        
+        
+    @authenticated
+    @jsonify
+    def post(self):
+        log.debug("REST POST %s <- %s" % (self.request.path,
+                                          pprint.pformat(self.request_params,
+                                                         indent=2,
+                                                         width=160)))
+        self.validate_params([
+            ('path', True),
+            ('input', True),
+            'project_id',
+            'template_id'])
+            
+            
+        proj_id = self.request_params['project_id']
+        s = session()
+        project = s.query(mgen.model.Project).filter_by(project_id=proj_id).one()
+        p = project.get_permission(self.current_profile.email)
+        if not p & Permission.Edit:
+            raise mgen.error.Forbidden().describe("You cannot modify project " + proj_id)
+            
+        p = mgen.model.Page(page_id=uuid.uuid4(),
+                            path=self.request_params['path'],
+                            input=json.loads(self.request_params['input']),
+                            project_id=self.request_params['project_id'],
+                            template_id=self.request_params['template_id'])
+                            
+        s.add(p)
+        self.commit_changes(s)
+        self.set_status(201)
+        
+        log.debug('created new page: %s' % p.page_id)
+        return self.get_objects(mgen.model.Template,
+                                self.query(),
+                                p.page_id)
+                            
                                  
 class Templates(GenericModelHandler):
     """"Templates restfull interface"""
@@ -326,36 +391,35 @@ class Templates(GenericModelHandler):
                                                          indent=2,
                                                          width=160)))
         self.validate_params([
-            'name', 'type', 'data'
-        ])
+            ('name', True),
+            ('type', True),
+            'data'])
         
-        validate_access(Permission.Write,
-                        self.request_params['project_id'],
-                        self.current_profile.email)
-        
+        proj_id = self.request_params['project_id']
         s = session()
+        project = s.query(mgen.model.Project).filter_by(project_id=proj_id).one()
+        p = project.get_permission(self.current_profile.email)
+        if not p & Permission.Edit:
+            raise mgen.error.Forbidden().describe("You cannot modify project " + proj_id)
+            
         tmpl = mgen.model.Template(template_id=uuid.uuid4(),
                                    name=self.request_params['name'],
                                    type=self.request_params['type'],
                                    project_id=self.request_params['project_id'],
                                    data=self.request_params['data'])
         
-        if tmpl.type not in mgen.generator.item_types:
-            raise mgen.BadRequest().describe('unsupported item type: %s. supported: %s' % (
+        if tmpl.type not in mgen.generator.template.template_types:
+            raise mgen.error.BadRequest().describe('unsupported template type: %s. supported: %s' % (
                 tmpl.type, ', '.join(mgen.generator.item_types.keys())))
-                                   
-        ownership = mgen.model.project2profile(project=project.project_id,
-                                               profile=self.current_profile.email,
-                                               permission=Permission.Owner)
-        s.add(project)
-        s.add(ownership)
+        
+        s.add(tmpl)
         self.commit_changes(s)
         self.set_status(201)
         
-        log.debug('created new project: %s' % project.project_id)
-        return self.get_objects(mgen.model.Project,
+        log.debug('created new template: %s' % tmpl.template_id)
+        return self.get_objects(mgen.model.Template,
                                 self.query(),
-                                project.project_id)
+                                tmpl.template_id)
 
 
 class Items(GenericModelHandler):

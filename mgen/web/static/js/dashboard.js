@@ -2,18 +2,21 @@
  * Dashboard UI magic
  */
 
-var projects = new MGEN.DataStore("projects")
+var projects = $().dataQuery('projects')
 
 var refreshDashboard = function() {
     $("#dashboard-overview").empty()
     $("#dashboard-progress").show();
-    projects.update(function(data) {
+    projects.fetch(function(data) {
         $("#dashboard-progress").hide();
     })
 }
 
 $(document).ready(function() {
-    $(projects).on('change', function(ev, store) {
+    
+    refreshDashboard()
+    
+    $(projects).on('loaded', function(ev, query) {
         // populate dashboard overview
         // and projects selector
         var overview = $('#dashboard-overview')
@@ -23,7 +26,7 @@ $(document).ready(function() {
         
         overview.empty()
         overview.append(currentRow)
-        store.data.forEach( function(proj) {
+        query.data.forEach( function(proj) {
             
             if (projectIdx % 3 == 0) {
                 currentRow = $('<div class="dashboard row"></div>')
@@ -55,38 +58,43 @@ $(document).ready(function() {
         })
         
         // add separator and new project selection
-        if (store.data.length > 0)
+        if (query.data.length > 0)
             projectSelector.append($('<li role="separator" class="divider"></li>'))
         
         projectSelector.append($('<li>' +
             '<a data-toggle="modal" data-target="#new-project">New Project</a>' + 
             '</li>'))
     })
-    refreshDashboard()
+    
     
     $('#new-project-create').click(function() {
-        projects.add({
-            title: $('#new-project-title').val(),
-            public_base_uri: $('#new-project-uri').val(),
-            options: {
-                enable_robots: $('#new-project-enable-robots').attr('checked'),
-                enable_sitemap: $('#new-project-enable-sitemap').attr('checked')
+        $.ajax('/projects', {
+            method: "POST",
+            dataType: "json",
+            data: {
+                title: $('#new-project-title').val(),
+                public_base_uri: $('#new-project-uri').val(),
+                options: {
+                    enable_robots: $('#new-project-enable-robots').attr('checked'),
+                    enable_sitemap: $('#new-project-enable-sitemap').attr('checked')
+                }
+            },
+            error: function(xhr, type, ex) {
+                $.showErrorDialog(ex, xhr.responseText)
+            },
+            success: function(data) {
+                $("#new-project").modal("hide")
+                $('#dashboard-alerts').empty()
+                $('#dashboard-alerts').append(
+                    $('<div class="alert alert-success fade in">' +
+                        '<a href="#" class="close" data-dismiss="alert">&times;</a>' +
+                        '<strong>Hurray!</strong> Your new project ' +
+                        data.projects[0].title +
+                        ' was created successfuly.' +
+                      '</div>')
+                )
+                refreshDashboard()
             }
-        }, function(created) {
-            
-            $("#new-project").modal("hide")
-            
-            $('#dashboard-alerts').empty()
-            $('#dashboard-alerts').append(
-                $('<div class="alert alert-success fade in">' +
-                    '<a href="#" class="close" data-dismiss="alert">&times;</a>' +
-                    '<strong>Hurray!</strong> Your new project ' +
-                    created.title +
-                    ' was created successfuly.' +
-                  '</div>')
-            )
-            
-            refreshDashboard()
         })
     })
 })
