@@ -20,7 +20,6 @@
             
             <div class="form-group">
               <label for="new-item-type">Type</label>
-              <p class="help-block">Type of item specifies format of the item body.</p>
     
               {% for itype in item_types %}
                 <label class="radio-inline">
@@ -31,6 +30,8 @@
                   </input>
                 </label>
               {% end %}
+              
+              <p class="help-block">Type of item specifies format of the item body.</p>
             </div>
             <div class="form-group">
               <label for="new-item-tags">Tags</label>
