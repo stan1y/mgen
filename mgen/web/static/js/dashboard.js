@@ -6,10 +6,7 @@ var projects = $().dataQuery('projects')
 
 var refreshDashboard = function() {
     $("#dashboard-overview").empty()
-    $("#dashboard-progress").show();
-    projects.fetch(function(data) {
-        $("#dashboard-progress").hide();
-    })
+    projects.fetch()
 }
 
 $(document).ready(function() {
@@ -48,7 +45,7 @@ $(document).ready(function() {
             
             projectSelector.append(
                 $('<li>' +
-                    '<a href="/api/project/' + proj.id + '">' +
+                    '<a href="/project/' + proj.id + '">' +
                         proj.title +
                     '</a>' +
                 '</li>')
@@ -68,19 +65,19 @@ $(document).ready(function() {
     
     
     $('#new-project-create').click(function() {
-        $.ajax('/projects', {
+        $.ajax('/api/projects', {
             method: "POST",
             dataType: "json",
-            data: {
+            data: JSON.stringify({
                 title: $('#new-project-title').val(),
                 public_base_uri: $('#new-project-uri').val(),
                 options: {
                     enable_robots: $('#new-project-enable-robots').attr('checked'),
                     enable_sitemap: $('#new-project-enable-sitemap').attr('checked')
                 }
-            },
+            }),
             error: function(xhr, type, ex) {
-                $.showErrorDialog(ex, xhr.responseText)
+                $().showErrorDialog(ex, xhr.responseText)
             },
             success: function(data) {
                 $("#new-project").modal("hide")

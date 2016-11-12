@@ -1,0 +1,71 @@
+<!-- New Page Dialog -->
+<div class="modal fade" id="new-page" tabindex="-1" role="dialog" aria-labelledby="new-page-label">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="new-page-label">New Page</h4>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div id="new-page-wizard" class="wizard">
+          
+            <div class="step first">
+              <div class="form-group">
+                  <label for="new-page-name">Location</label>
+                  <input type="text" class="form-control" id="new-page-path" placeholder="about-me" required>
+                  <p class="help-block">A unique path for this page. Leave empty to create an index page for project.</p>
+              </div>
+              <div class="form-group">
+                  <label for="new-page-template">Template</label>
+                  <div class="form-group">    
+                    <select class="form-control" id="new-page-template">
+                      <option value="test">Test Template</option>
+                    </select>
+                  </div>
+                  <p class="help-block">A page is rendered with a specific template. It defines it final look.</p>
+              </div>
+              <div class="form-group">
+                <div class="input-group">
+                  <label for="new-page-type">Parameters</label>
+                  <span class="input-group-btn">
+                    <button class="form-control" id="new-page-add-param">
+                      <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                    </button>
+                  </span>
+                </div>
+                <div id="new-page-parameters">
+                  <label for="test1">Test 1</label>
+                  <div id="test1" class="input-group">
+                    <input type="text" class="form-control" />
+                    <span class="input-group-btn">
+                      <button class="form-control" class="btn btn-default" id="new-page-del-param">
+                        <span class="glyphicon glyphicon-minus" aria-hidden="true"></span> 
+                      </button>
+                    </span>
+                  </div>
+                </div>
+                <p class="help-block">A template may expect some parameters, please specify them here</p>
+              </div>
+            </div>
+            
+            <div class="step">
+              <div class="form-group">
+                  <p class="help-block">Here you can preview rendering of this page. However the results here are not final.</p>
+                  <iframe name="template-preview" id="new-page-preview" style="width: 600px; height: 600px; border:none; "></iframe>  
+                  
+                  <button class="form-control btn btn-default" id="new-page-show-preview">Preview</button>
+              </div>
+              
+            </div>
+            
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button id="new-page-back" class="btn btn-default">Cancel</button>
+        <button id="new-page-next" class="btn btn-primary">Next</button>
+    </div>
+    </div>
+  </div>
+</div>

@@ -50,9 +50,23 @@ $(document).ready(function() {
     itemsCnt.setSource($().dataQuery("items").filter({project_id: projectId}))
     itemsCnt.update()
     
+    /* Pages container */
+    
+    var pagesCnt = $().itemsContainer('project-pages', {
+        emptyMsg: "No pages in project."
+    })
+    pagesCnt.setDefaultRenderFunc(function(page) {
+        return $('<div class="col-xs-6 col-md-4">' +
+            '<h2>' + page.path + '</h2>' +
+            '<h4>' + templatesCnt.find({template_id: page.template_id}).name + '</h4>' +
+        '</div>')
+    })
+    pagesCnt.setSource($().dataQuery("pages").filter({project_id: projectId}))
+    pagesCnt.update()
+    
     /* New Item Wizard */
     
-    $('#new-item-wizard').wizard({
+    var itemWiz = $('#new-item-wizard').wizard({
         btnNext: 'new-item-next',
         btnPrev: 'new-item-back'
     }).on('finished', function() {
@@ -66,7 +80,7 @@ $(document).ready(function() {
                 uri_path: $('#new-item-uri').val(),
                 type: $('#new-item-type').val(),
                 tags: tags.length > 0 ? tags.split(',') : [],
-                published: $('#new-item-published').attr('checked') == 'checked',
+                published: $('#new-item-published').is(':checked'),
                 publish_on: $('#new-item-publish-date').val(),
                 body: $('#new-item-body').val()
             }),
@@ -88,6 +102,11 @@ $(document).ready(function() {
         })
     })
     
+    $('#project-add-item').click(function() {
+        itemWiz[0].reset()
+        $('#new-item').modal()
+    })
+    
     $('#new-item-published').change(function() {
         $('#new-item-publish-date').toggle()
     })
@@ -102,9 +121,7 @@ $(document).ready(function() {
     var templateWiz = $('#new-template-wizard').wizard({
         btnNext: 'new-template-next',
         btnPrev: 'new-template-back'
-    });
-    
-    templateWiz.on('switched', function(ev) {
+    }).on('switched', function(ev) {
         
         if (ev.target.atTheEnd()) {
             // is it step to render template preview
@@ -127,7 +144,7 @@ $(document).ready(function() {
                 project_id: projectId,
                 name: $('#new-template-name').val(),
                 type: $('#new-template-type').val(),
-                do_import: $('#new-template-import').attr('checked') == 'checked',
+                do_import: $('#new-template-import').is(':checked'),
                 import_from: $('#new-template-import-file').val(),
                 data: $('#new-template-data').val()
             }),
@@ -154,6 +171,11 @@ $(document).ready(function() {
         })
     })
     
+    $('#project-add-tmpl').click(function() {
+        templateWiz[0].reset()
+        $('#new-template').modal()
+    })
+    
     $('#new-template-show-preview').on('click', function() {
         var templateData = $('#new-template-data').val(),
             templateType = $('#new-template-type').val()
@@ -176,15 +198,63 @@ $(document).ready(function() {
         }
     })
     
-    $('#project-add-tmpl').click(function() {
-        templateWiz[0].reset()
-        $('#new-template').modal()
-    })
-    
     $('#new-template-import').on('change', function() {
         // toggle disabled attribute on inputs
         $('#new-template-import-file').prop('disabled', function(i, v) { return !v; });
         $('#new-template-data').prop('disabled', function(i, v) { return !v; });
     })
     
+    
+    /* Page Wizard */
+    var pageWiz = $('#new-page-wizard').wizard({
+        btnNext: 'new-page-next',
+        btnPrev: 'new-page-back'
+    }).on('switched', function(ev) {
+        if (ev.target.atTheEnd()) {
+            // is it step to render template preview
+            var template_id = $('#new-page-template').val()
+            if (template_id) {
+                $('#new-page-show-preview').attr('disabled', false)
+            }
+            else {
+                $('#new-page-show-preview').attr('disabled', true)
+            }
+        }
+    }).on('finished', function(ev) {
+        $.ajax('/api/pages', {
+            method: 'POST',
+            dataType: "json",
+            data: JSON.stringify({
+                project_id: projectId,
+                template_id: $("#new-page-template").val(),
+                path: $('#new-page-path').val(),
+                params: {}
+            }),
+            error: function(xhr, type, ex) {
+                $().showErrorDialog(ex, xhr.responseText)
+            },
+            success: function(data) {
+                $("#new-page").modal('hide')
+                
+                $('#dashboard-alerts').empty()
+                $('#dashboard-alerts').append(
+                    $('<div class="alert alert-success fade in">' +
+                        '<a href="#" class="close" data-dismiss="alert">&times;</a>' +
+                        'New page <strong>' +
+                        data.pages[0].path +
+                        '</strong> was created successfuly.' +
+                      '</div>')
+                )
+                
+                // update views
+                pagesCnt.update()
+                $().dataQuery('projects').filter({project_id: projectId}).one(renderProject)
+            }
+        })
+    })
+    
+    $('#project-add-page').click(function() {
+        pageWiz[0].reset()
+        $('#new-page').modal()
+    })
 })

@@ -101,7 +101,7 @@
     }
     
     Wizard.prototype.atTheBegining = function() {
-        return (this.currentStep == 0)
+        return (this.currentStepIdx == 0)
     }
     
     Wizard.prototype.forward = function() {
@@ -119,7 +119,7 @@
         if (this.atTheBegining()) {
             // at the first step, close dialog
             this.el.parents('.modal').modal('hide')
-            $(this).trigged('canceled')
+            $(this).trigger('canceled')
             return
         }
         this.currentStepIdx -= 1

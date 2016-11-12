@@ -167,12 +167,8 @@
         }, options)
         
         this.containerId = containerId
-        this.progressId = "img-" + containerId + "-progress"
         this.cnt = $('#' + containerId)
         this.source = null
-        $('<img id="' + this.progressId +
-            '" class="progress-small" id="progress-tmpl" src="/static/img/01-progress.gif" style="display: none;" />').insertBefore(
-                this.cnt.parent())
     }
     
     ItemsContainer.prototype.render = function(items, renderFunc) {
@@ -214,21 +210,10 @@
         })
     }
     
-    ItemsContainer.prototype.update = function() {
+    ItemsContainer.prototype.update = function(callback) {
         if (this.source) {
-            this.showProgress()
-            this.source.fetch(function() {
-                this.target.hideProgress()
-            })
+            this.source.fetch(callback)
         }
-    }
-    
-    ItemsContainer.prototype.showProgress = function() {
-        $('#' + this.progressId).show()
-    }
-    
-    ItemsContainer.prototype.hideProgress = function() {
-        $('#' + this.progressId).hide()
     }
     
     $.fn.itemsContainer = function(containerId, options) {
