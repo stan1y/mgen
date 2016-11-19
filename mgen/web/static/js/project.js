@@ -3,27 +3,29 @@
  */
 
 
-var renderProject = function(proj) {
-    $("#project-id").val(proj.project_id)
-    $("#project-title").html(proj.title)
-    $("#project-public-base-uri").html(proj.public_base_uri)
-    
-    $("#project-deploy").html('Deploy (' + proj.slugs.length + ' slugs)')
-    if (proj.slugs.length <= 0)
-        $("#project-deploy").addClass('disabled')
-    $("#project-items-link").html(proj.items.length + ' items')
-    $("#project-templates-link").html(proj.templates.length + ' templates')
-}
-
 $(document).ready(function() {
     
-    /* Project details */
+    var renderProject = function(proj) {
+        $("#project-id").val(proj.id)
+        $("#project-title").html(proj.title)
+        $("#project-public-base-uri").html(proj.public_base_uri)
+        
+        $("#project-items-link").html(proj.items.length + ' items')
+        $("#project-templates-link").html(proj.templates.length + ' templates')
+        $("#project-slugs-link").html(proj.slugs.length + ' slugs')
+        //$("#project-sequences-link").html(proj.sequences.length + ' sequences')
+        $("#project-sequences-link").html('0 sequences')
+        $("#project-pages-link").html(proj.pages.length + ' pages')
+        
+        if (proj.slugs.length <= 0)
+            $("#project-deploy").addClass('disabled')
+    }
     
+    /* Project details */
     var projectId = $('#project-id').val()
     $().dataQuery('projects').filter({project_id: projectId}).one(renderProject)
     
     /* Templates container */
-    
     var templatesCnt = $().itemsContainer('project-templates', {
         emptyMsg: "No templates in project."
     })
@@ -37,7 +39,6 @@ $(document).ready(function() {
     templatesCnt.update()
     
     /* Items container */
-    
     var itemsCnt = $().itemsContainer('project-items', {
         emptyMsg: "No items in project."
     })
@@ -51,7 +52,6 @@ $(document).ready(function() {
     itemsCnt.update()
     
     /* Pages container */
-    
     var pagesCnt = $().itemsContainer('project-pages', {
         emptyMsg: "No pages in project."
     })
@@ -65,7 +65,6 @@ $(document).ready(function() {
     pagesCnt.update()
     
     /* New Item Wizard */
-    
     var itemWiz = $('#new-item-wizard').wizard({
         btnNext: 'new-item-next',
         btnPrev: 'new-item-back'
@@ -100,10 +99,10 @@ $(document).ready(function() {
                 )
             }
         })
-    })
+    })[0]
     
     $('#project-add-item').click(function() {
-        itemWiz[0].reset()
+        itemWiz.reset()
         $('#new-item').modal()
     })
     
@@ -116,11 +115,24 @@ $(document).ready(function() {
         dateFormat: "dd-mm-yy"
     })
     
-    /* New Template Wizard */
-    
+    /* 
+     * New Template Wizard
+     */
+     
     var templateWiz = $('#new-template-wizard').wizard({
         btnNext: 'new-template-next',
-        btnPrev: 'new-template-back'
+        btnPrev: 'new-template-back',
+        validate: function(ev) {
+            this.validateIsEmpty('input#new-template-name', ev)
+            this.validateIsEmpty('input#new-template-type', ev)
+            
+            if ($('input#new-template-import').is(':checked')) {
+                this.validateIsEmpty('input#new-template-import-file', ev)
+            }
+            else {
+                this.validateIsEmpty('textarea#new-template-data', ev)
+            }
+        }
     }).on('switched', function(ev) {
         
         if (ev.target.atTheEnd()) {
@@ -137,6 +149,12 @@ $(document).ready(function() {
         
     }).on('finished', function(ev) {
         
+        // collect parameters for this template
+        var params = []
+        $('input[name=template-parameter]').each(function(i, inp) {
+            params.push($(inp).val())
+        })
+        
         $.ajax('/api/templates', {
             method: 'POST',
             dataType: "json",
@@ -146,7 +164,8 @@ $(document).ready(function() {
                 type: $('#new-template-type').val(),
                 do_import: $('#new-template-import').is(':checked'),
                 import_from: $('#new-template-import-file').val(),
-                data: $('#new-template-data').val()
+                data: $('#new-template-data').val(),
+                params: params
             }),
             error: function(xhr, type, ex) {
                 $().showErrorDialog(ex, xhr.responseText)
@@ -169,11 +188,31 @@ $(document).ready(function() {
                 $().dataQuery('projects').filter({project_id: projectId}).one(renderProject)
             }
         })
+    })[0]
+    
+    $('#project-add-tmpl').on('click', function() {
+        templateWiz.reset()
+        $('#new-template').modal()
     })
     
-    $('#project-add-tmpl').click(function() {
-        templateWiz[0].reset()
-        $('#new-template').modal()
+    $('#new-template-add-param').on('click', function() {
+        var paramId = Math.random().toString(36).substring(7)
+        $("#new-template-parameters").append($('<div id="param-' + paramId + '" class="input-group">' +
+                                                '<div class="form-inline row">' +
+                                                   '<input type="text" name="template-parameter" class="form-control" placeholder="my-param-name"/>' +
+                                                   '<input type="text" name="template-parameter" class="form-control" placeholder="my-param-name"/>' +
+                                                   '<input type="text" name="template-parameter" class="form-control" placeholder="my-param-name"/>' +
+                                                   '<span class="input-group-btn">' +
+                                                     '<button class="param-remove form-control" data-param-id="param-' + paramId + '" >' +
+                                                       '<span class="glyphicon glyphicon-minus" aria-hidden="true"></span>' +
+                                                     '</button>' +
+                                                   '</span>' +
+                                                 '</div>' +
+                                               '</div>'))
+        $('.param-remove').on('click', function() {
+            $('#' + $(this).attr('data-param-id') ).remove()
+        })
+        return false
     })
     
     $('#new-template-show-preview').on('click', function() {
@@ -251,10 +290,20 @@ $(document).ready(function() {
                 $().dataQuery('projects').filter({project_id: projectId}).one(renderProject)
             }
         })
-    })
+    })[0]
     
-    $('#project-add-page').click(function() {
-        pageWiz[0].reset()
+    $('#project-add-page').on('click', function() {
+        pageWiz.reset()
+        $("#new-page-template").empty()
+        $().dataQuery('templates').filter({project_id: projectId}).fetch(function(templates) {
+            $(templates).each(function(i, tmpl) {
+                $("#new-page-template").append($('<option value="' +
+                                               tmpl.id +
+                                               '">' +
+                                               tmpl.name +
+                                               '</option>'))      
+            })
+        })
         $('#new-page').modal()
     })
 })

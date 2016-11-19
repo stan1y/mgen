@@ -289,8 +289,9 @@ class MutationList(Mutable, list):
 #
 # Project:   Top level model with linked permissions per Profile
 #
-# Template:  A template keeps formatting information used to generate html with set
-#            of variables available to render and specified by caller
+# Template:  A template represents a formatting used to render html with a list of
+#            variables. These variables are available to formatting code and
+#            must be specified by a caller.
 #
 # Page:      A basic rendering item with user defined input, resources and a Template producing html.
 #            There are several types of pages with different sets of predefined inputs 
@@ -358,7 +359,7 @@ class Profile(GenericModelMixin, BaseModel):
     '''Base class represending local profile for security principals'''
     
     email = Column(EscapedString(255), primary_key=True)
-    name = Column(EscapedString(255))
+    name = Column(EscapedString(255), unique=True)
     picture = Column(EscapedString(1024))
     projects = relationship("Project",
                             secondary=project2profile,
@@ -385,7 +386,7 @@ class Project(GenericModelMixin, BaseModel):
     '''The project to build a static website'''
     
     project_id = Column(IDType, primary_key=True)
-    title = Column(EscapedString(255))
+    title = Column(EscapedString(255), unique=True)
     public_base_uri = Column(EscapedString(1024))
     options = Column(MutationDict.as_mutable(JSONObject))
     members = relationship("Profile", 
@@ -400,7 +401,8 @@ class Project(GenericModelMixin, BaseModel):
             'members': [m.email for m in self.members],
             'slugs': [s.slug_id for s in self.slugs],
             'templates': [t.template_id for t in self.templates],
-            'items': [i.item_id for i in self.items]
+            'items': [i.item_id for i in self.items],
+            'pages': [p.page_id for p in self.pages]
         }
 
     def get_permission(self, email):
@@ -470,8 +472,8 @@ class Item(GenericModelMixin, BaseModel):
     '''Item is a generic container with user provided content'''
     
     item_id = Column(IDType, primary_key=True)
-    name = Column(EscapedString(255))
-    uri_path = Column(EscapedString(255))
+    name = Column(EscapedString(255), unique=True)
+    uri_path = Column(EscapedString(255), unique=True)
     type = Column(EscapedString(255))
     body = Column(Text)
     published = Column(Boolean)
@@ -501,9 +503,10 @@ class Template(GenericModelMixin, BaseModel):
     '''Template is used to render Items into html for Slug'''
     
     template_id = Column(IDType, primary_key=True)
-    name = Column(EscapedString(255))
+    name = Column(EscapedString(255), unique=True)
     type = Column(EscapedString(255))
     data = Column(EscapedString)
+    params = Column(MutationList.as_mutable(JSONObject))
     
     project_id = Column(IDType, ForeignKey('project.project_id'))
     project = relationship(Project, backref=backref('templates', lazy='dynamic'))
@@ -513,14 +516,15 @@ class Template(GenericModelMixin, BaseModel):
             'id': self.template_id,
             'name': self.name,
             'type': self.type,
-            'data': self.data
+            'data': self.data,
+            'params': self.params
         }
 
 
 class Page(GenericModelMixin, BaseModel):
     
     page_id = Column(IDType, primary_key=True)
-    path    = Column(EscapedString(255))
+    path    = Column(EscapedString(255), unique=True)
     input   = Column(MutationDict.as_mutable(JSONObject))
     
     template_id = Column(IDType, ForeignKey("template.template_id"))

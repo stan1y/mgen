@@ -1,5 +1,9 @@
 {% extends dashboard.html %}
 
+{% block title %}
+MGEN : {{ escape(project.title) }}
+{% end %}
+
 {% block head %}
 <script type="text/javascript" src="/static/js/wizard.js"></script>
 <script type="text/javascript" src="/static/js/dashboard.js"></script>
@@ -60,10 +64,11 @@
   <p class="lead">
     <h4>
       The {{ escape(project.title) }} project containes
-      <a id="project-templates-lnk" >{{ project.templates.count() }} templates </a>, 
-      <a id="project-templates-lnk">{{ project.items.count() }} items</a>, 
-      <a>0 sequences</a> and 
-      <a>0 pages</a>.
+      <a id="project-templates-link" href="#project-templates"></a>, 
+      <a id="project-items-link" href="#project-items"></a>,
+      <a id="project-slugs-link" href="#project-slugs"></a>,
+      <a id="project-sequences-link" href="#project-sequences"></a> and 
+      <a id="project-pages-link" href="#project-pages"></a>.
     </h4>
     
     <h5>
@@ -81,7 +86,7 @@
   {% if allow_create %}
   <!-- Begin items menu -->
   <div class="btn-group" role="group" aria-label="...">
-    <button id="project-add-item" data-toggle="modal" data-target="#new-item" class="btn btn-default">
+    <button id="project-add-item" class="btn btn-default">
       <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 
       New Item
     </button>
@@ -92,9 +97,7 @@
   {% end %}
   
   <!-- Begin items grid -->
-  <div>
-    <div id="project-items" class="container-fluid">
-    </div>
+  <div id="project-items" class="container-fluid">
   </div>
   
   <br/>
@@ -115,7 +118,7 @@
   {% end %}
   
   <!-- Begin sequences grid -->
-  <div id="project-seq" class="container-fluid">
+  <div id="project-sequences" class="container-fluid">
   </div>
   
   <br />

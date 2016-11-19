@@ -393,6 +393,7 @@ class Templates(GenericModelHandler):
         self.validate_params([
             ('name', True),
             ('type', True),
+            'params',
             'data'])
         
         proj_id = self.request_params['project_id']
@@ -406,7 +407,8 @@ class Templates(GenericModelHandler):
                                    name=self.request_params['name'],
                                    type=self.request_params['type'],
                                    project_id=self.request_params['project_id'],
-                                   data=self.request_params['data'])
+                                   data=self.request_params['data'],
+                                   params=self.request_params['params'])
         
         if tmpl.type not in mgen.generator.template.template_types:
             raise mgen.error.BadRequest().describe('unsupported template type: %s. supported: %s' % (

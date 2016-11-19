@@ -8,7 +8,7 @@
     
     var Wizard = function(el, options) {
         this.options = $.extend({
-            animate: true,
+            animate: false,
             animateShow: "fadeIn",
             animateHide: "fadeOut",
             btnNext: "wizard-next",
@@ -27,11 +27,13 @@
         this.btnPrev = $('#' + this.options.btnPrev)
         
         var self = this;
-        this.btnNext.click(function() {
+        this.btnNext.on('click', function() {
             self.forward()
+            return false
         })
-        this.btnPrev.click(function() {
+        this.btnPrev.on('click', function() {
             self.back()
+            return false
         })
         
         this.steps.hide()
@@ -40,7 +42,7 @@
     }
     
     Wizard.prototype.reset = function() {
-        this.el.parent('form')[0].reset()
+        this.el.parents('form')[0].reset()
         this.steps.hide()
         this.currentStepIdx = 0
         this.currentStep = $(this.el.find('div.step.first')[0])
@@ -60,6 +62,9 @@
             this.btnNext.text(this.options.btnNextText)
             if (this.currentStepIdx == 0) {
                 this.btnPrev.text(this.options.btnCancelText)
+            }
+            else {
+                this.btnPrev.text(this.options.btnBackText)
             }
         }
     }
@@ -96,6 +101,28 @@
         $(this).trigger('switched')
     }
     
+    Wizard.prototype.validate = function() {
+        // clear errors first
+        $('.form-group').removeClass('has-error')
+        $('.form-group').removeClass('has-danger')
+        
+        var ev = { errors: [] }
+        if (this.options.validate) {
+            this.options.validate.apply(this, [ev])
+            if (ev.errors.length > 0) {
+                // there are validation errors
+                $(ev.errors).each(function(i, err) {
+                    $(err).parents('.form-group').addClass('has-error')
+                    $(err).parents('.form-group').addClass('has-danger')
+                })
+            }
+        }
+    }
+    
+    Wizard.prototype.isValid = function() {
+        return ($(".has-error")[0] === undefined)
+    }
+    
     Wizard.prototype.atTheEnd = function() {
         return (this.currentStepIdx >= this.steps.length - 1)
     }
@@ -104,7 +131,16 @@
         return (this.currentStepIdx == 0)
     }
     
+    Wizard.prototype.validateIsEmpty = function(selector, ev) {
+        if ($(selector).val() == '') {
+            ev.errors.push(selector)
+        }
+    }
+    
     Wizard.prototype.forward = function() {
+        this.validate()
+        if (!this.isValid()) return
+        
         if (this.atTheEnd()) {
             // at the last step, close dialog
             this.el.parents('.modal').modal('hide')
@@ -116,6 +152,9 @@
     }
     
     Wizard.prototype.back = function() {
+        this.validate()
+        if (!this.isValid()) return
+        
         if (this.atTheBegining()) {
             // at the first step, close dialog
             this.el.parents('.modal').modal('hide')

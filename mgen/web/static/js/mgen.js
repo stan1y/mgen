@@ -1,11 +1,5 @@
-/* MGEN: Static Website Generator
- * Client-side API access library
- */
+/* MGEN: Client-side API access library */
 
-/*
- * MGEN Wizard jDataQuery plugin
- */
- 
 (function ( $ ) {
     
     /*
@@ -173,7 +167,6 @@
     
     ItemsContainer.prototype.render = function(items, renderFunc) {
         var currentRow = $(this.options.rowTemplate),
-            itemIdx = 0,
             self = this
         
         if (!renderFunc)

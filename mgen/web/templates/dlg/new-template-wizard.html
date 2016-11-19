@@ -6,65 +6,83 @@
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <h4 class="modal-title" id="new-template-label">New Template</h4>
       </div>
+      <form>
       <div class="modal-body">
-        <form>
-          <div id="new-template-wizard" class="wizard">
+        <div id="new-template-wizard" class="wizard">
+        
           
-            <div class="step first">
-              <div class="form-group">
-                  <label for="new-template-name">Name</label>
-                  <input type="text" class="form-control" id="new-template-name" placeholder="Untitled Template" required>
-                  <p class="help-block">A unique name of this template.</p>
-              </div>
-              <div class="form-group">
-                  <label for="new-template-type">Format</label>
-                  <div class="form-group">    
-                    {% for ttype in template_types %}
-                        <input type="radio" name="new-template-type" id="new-template-type" \
-                               value="{{ escape(ttype) }}" \
-                               {% if ttype == 'builtin' %}
-                               checked
-                               {% end %} >
-                          {{ escape(template_types[ttype]) }}
-                      </label>
-                    {% end %}
-                  </div>
-                  <p class="help-block">Template can be defined in a number of supported formats.</p>
-              </div>
-              <div class="form-group">
-                  <div class="checkbox">
-                      <label for="new-template-import-file">
-                          <input id="new-template-import" type="checkbox">
-                            <strong>Load from archive?</strong>
-                          </input>
-                      </label>
-                  </div>
-                  <input type="file" class="form-control" id="new-template-import-file" disabled>
-                  <p class="help-block">Paste template here now or you can specify previously saved project. Also you can keep it empty for now and enter it later.</p>
-              </div>
-              <div class="form-group">
-                <label for="new-template-data">Data</label>
-                <textarea class="form-control" rows="20" id="new-template-data"></textarea>
-              </div>
+            <!-- General template info step -->
+          <div class="step first">
+            <div class="form-group">
+                <label for="new-template-name">Name</label>
+                <input type="text" class="form-control" id="new-template-name" placeholder="Untitled Template" required>
+                <p class="help-block">A unique name of this template.</p>
             </div>
-            
-            <div class="step">
-              <div class="form-group">
-                  <p class="help-block">Here you can preview rendering of this template. However the results here are not final.</p>
-                  <iframe name="template-preview" id="new-template-preview" style="width: 600px; height: 600px; border:none; "></iframe>  
-                  
-                  <button class="form-control btn btn-default" id="new-template-show-preview">Preview</button>
-              </div>
-              
+            <div class="form-group">
+                <label for="new-template-type">Format</label>
+                <div class="form-group">    
+                  {% for ttype in template_types %}
+                      <input type="radio" name="new-template-type" id="new-template-type" \
+                             value="{{ escape(ttype) }}" \
+                             {% if ttype == 'builtin' %}
+                             checked
+                             {% end %} >
+                        {{ escape(template_types[ttype]) }}
+                    </label>
+                  {% end %}
+                </div>
+                <p class="help-block">Template can be defined in a number of supported formats.</p>
             </div>
-            
+            <div class="form-group">
+                <div class="checkbox">
+                    <label for="new-template-import-file">
+                        <input id="new-template-import" type="checkbox">
+                          <strong>Load from archive?</strong>
+                        </input>
+                    </label>
+                </div>
+                <input type="file" class="form-control" id="new-template-import-file" disabled>
+                <p class="help-block">Paste template here now or you can specify previously saved project. Also you can keep it empty for now and enter it later.</p>
+            </div>
+            <div class="form-group">
+              <label for="new-template-data">Data</label>
+              <textarea class="form-control" rows="20" id="new-template-data"></textarea>
+            </div>
           </div>
-        </form>
+          
+            <!-- Template params step -->
+          <div class="step">
+            <div class="form-group">
+                <div class="input-group">
+                  <label for="new-page-type">Parameters</label>
+                  <p class="help-block">A template may expect some parameters, please specify names for these parameters here.</p>
+                  <span class="input-group-btn">
+                    <button class="form-control" id="new-template-add-param">
+                      <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                    </button>
+                  </span>
+                </div>
+                <div id="new-template-parameters">
+                </div>
+              </div>
+          </div>
+          
+            <!-- Preview step -->
+          <div class="step">
+            <div class="form-group">
+                <p class="help-block">Here you can preview rendering of this template. However the results here are not final.</p>
+                <iframe name="template-preview" id="new-template-preview" style="width: 600px; height: 600px; border:none; "></iframe>  
+                
+                <button class="form-control btn btn-default" id="new-template-show-preview">Preview</button>
+            </div>  
+          </div>
+          
+        </div>
       </div>
       <div class="modal-footer">
-        <button id="new-template-back" class="btn btn-default">Cancel</button>
+        <button id="new-template-back" class="btn btn-default">Back</button>
         <button id="new-template-next" class="btn btn-primary">Next</button>
-    </div>
+      </div>
     </div>
   </div>
 </div>
