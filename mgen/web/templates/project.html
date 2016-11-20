@@ -1,7 +1,7 @@
 {% extends dashboard.html %}
 
 {% block title %}
-MGEN : {{ escape(project.title) }}
+Project : {{ escape(project.title) }}
 {% end %}
 
 {% block head %}
@@ -11,8 +11,12 @@ MGEN : {{ escape(project.title) }}
 <script type="text/javascript" src="/static/js/project-template.js"></script>
 {% end %}
 
+
 {% block dashboard-frame %}
+
 <input type="hidden" id="project-id" value="{{ escape(project.project_id.hex) }}" />
+{% include "project-permissions.html" %}
+
 <div class="container">
   
   {% include "dlg/new-item-wizard.html" %}

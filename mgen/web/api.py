@@ -65,22 +65,42 @@ class BaseAPIRequestHandler(BaseRequestHandler):
     @property
     def request_params(self):
         '''Read and validate client JSON data for current request'''
-
+        
         if hasattr(self, '__cached_request_params'):
-            return self.__cached_request_params
-
-        content_type = self.request.headers.get('Content-Type')
-        body = self.request.body
-        if content_type == 'application/lzg+json':
-            log.debug('decompressing request params')
-            try:
-                body = zlib.decompress(body)
-            except zlib.error as ex:
-                raise mgen.error.BadRequest().describe("can't decompress body. %s" % ex)
-                
+            return getattr(self, '__cached_request_params')
+        
         try:
-            self.__cached_request_params = json.loads(body.decode('utf-8'))
-            return self.__cached_request_params
+            content_type = self.request.headers.get('Content-Type')
+            params = {}
+            
+            body = self.request.body
+            log.debug('parsing request params from "%s"' % content_type)
+            # handle different type of params input
+            
+            if 'application/json' in content_type:
+                params = json.loads(body.decode('utf-8'))
+            
+            if 'application/lzg+json' in content_type:
+                try:
+                    body = zlib.decompress(body)
+                except zlib.error as ex:
+                    raise mgen.error.BadRequest().describe("can't decompress body. %s" % ex)
+                
+                params = json.loads(body.decode('utf-8'))
+    
+            if 'application/x-www-form-urlencoded' in content_type:
+                for key in self.request.body_arguments:
+                    params[key] = self.get_body_argument(key)
+    
+            # cache parsed result
+            setattr(self, '__cached_request_params', params)
+            
+            log.debug('-- request params --')
+            log.debug(pprint.pformat(params, indent=2, width=160))
+            log.debug('-- end request params --')
+            
+            return getattr(self, '__cached_request_params')
+                
         except ValueError:
             raise mgen.error.BadRequest().describe('invalid json received')
 
@@ -167,37 +187,40 @@ class GenericModelHandler(BaseAPIRequestHandler):
     def get_objects(self, model, query, primary_key = None):
         '''Modify base query to get page of objects or single one.'''
         cname = collection_name(model)
-        q = session().query(model)
         if primary_key:
             pkey = get_primary_key(model)
             log.info('select one %s -> %s = "%s"' % (model.__tablename__, pkey, primary_key))
-            q = q.filter(pkey == primary_key)
+            query = query.filter(pkey == primary_key)
             log.debug('-- Begin SQL GET query --')
             log.debug(str(q))
             log.debug('-- End SQL GET query --')
-            o = q.first()
-            if not o:
+            obj = query.first()
+            if not obj:
                 raise mgen.error.NotFound().describe('object with %s="%s" was not found in %s' % (
                     pkey, primary_key, cname))
             return {
                 'total': 1,
-                cname: [q.one()]
+                cname: [obj]
             }
         else:
             do_page, page, start, limit = self.page_arguments
             qinfo = ''
             if 'filter' in self.request.arguments:
-                qinfo += ','.join(['%s=%s' % (k, v) for k, v in self.request.arguments['filter']])
+                flt = self.get_argument('filter')
+                flt_obj = json.loads(flt)
+                qinfo += pprint.pformat(flt_obj, indent=2, width=80)
             else:
                 qinfo = 'everything'
+
             if do_page:
-                qinfo += 'page=%d, start=%d, limit=%d' % (page, start, limit)
-            log.info('select range %s -> %s' % (model.__tablename__, qinfo))
+                qinfo += ' page=%d, start=%d, limit=%d' % (page, start, limit)
+                
+            log.info('select %s -> %s' % (model.__tablename__, qinfo))
             
-            q = self.sort(mgen.model.Project, query)
-            q = self.filter(mgen.model.Project, query)
-            q = self.range(mgen.model.Project, query)
-            return self.fetch_page(q, cname)
+            query = self.sort(model, query)
+            query = self.filter(model, query)
+            query = self.range(model, query)
+            return self.fetch_page(query, cname)
         
     
     def commit_changes(self, s = None):
@@ -206,6 +229,7 @@ class GenericModelHandler(BaseAPIRequestHandler):
             # use default session if param was omitted
             if s is None: s = session()
             s.commit()
+            s.flush()
             log.debug("commited changes to session %s" % s)
         
         except sqlalchemy.exc.IntegrityError as ie:
@@ -238,10 +262,10 @@ class Profiles(GenericModelHandler):
     
     @authenticated
     @jsonify
-    def get(self, oid=None):
+    def get(self, profile_id=None):
         """GET list or single profile"""
         q = session().query(Profile)
-        return self.get_objects(mgen.model.Profile, q, oid)
+        return self.get_objects(mgen.model.Profile, q, profile_id)
 
 
 class Projects(GenericModelHandler):
@@ -261,12 +285,12 @@ class Projects(GenericModelHandler):
     
     @authenticated
     @jsonify
-    def get(self, oid=None):
+    def get(self, project_id=None):
         """GET list or single project"""
         log.debug('REST GET %s -> %s' % (self.request.path,
-            pprint.pformat(self.page_arguments) if oid is None else '%s=%s' % (
-                get_primary_key(mgen.model.Project), oid) ))
-        return self.get_objects(mgen.model.Project, self.query(), oid)
+            pprint.pformat(self.page_arguments) if project_id is None else '%s=%s' % (
+                get_primary_key(mgen.model.Project), project_id) ))
+        return self.get_objects(mgen.model.Project, self.query(), project_id)
 
         
     @authenticated
@@ -313,11 +337,11 @@ class Pages(GenericModelHandler):
     
     @authenticated
     @jsonify
-    def get(self, oid=None):
+    def get(self, page_id=None):
         log.debug('REST GET %s -> %s' % (self.request.path,
-            pprint.pformat(self.page_arguments) if oid is None else '%s=%s' % (
-                get_primary_key(mgen.model.Page), oid) ))
-        return self.get_objects(mgen.model.Page, self.query(), oid)
+            pprint.pformat(self.page_arguments) if page_id is None else '%s=%s' % (
+                get_primary_key(mgen.model.Page), page_id) ))
+        return self.get_objects(mgen.model.Page, self.query(), page_id)
         
         
     @authenticated
@@ -373,16 +397,16 @@ class Templates(GenericModelHandler):
                                                    .join(mgen.model.Profile,
                                                          mgen.model.Profile.email==mgen.model.project2profile.c.profile)\
                                                    .filter(mgen.model.Profile.email==self.current_profile.email)
-    
+
     @authenticated
     @jsonify
-    def get(self, oid=None):
+    def get(self, template_id=None):
         """GET list or single template"""
         log.debug('REST GET %s -> %s' % (self.request.path,
-            pprint.pformat(self.page_arguments) if oid is None else '%s=%s' % (
-                get_primary_key(mgen.model.Template), oid) ))
-        return self.get_objects(mgen.model.Template, self.query(), oid)
-        
+            pprint.pformat(self.page_arguments) if template_id is None else '%s=%s' % (
+                get_primary_key(mgen.model.Template), template_id) ))
+        return self.get_objects(mgen.model.Template, self.query(), template_id)
+
     @authenticated
     @jsonify
     def post(self):
@@ -423,6 +447,61 @@ class Templates(GenericModelHandler):
                                 self.query(),
                                 tmpl.template_id)
 
+    @authenticated
+    @jsonify
+    def put(self, template_id):
+        self.validate_params([
+            ('pk', True),
+            ('name', True),
+            ('value', True)
+        ])
+        
+        s = session()
+        tmpl = s.query(mgen.model.Template).filter_by(template_id=template_id).one()
+        p = tmpl.project.get_permission(self.current_profile.email)
+        if not p & Permission.Edit:
+            raise mgen.error.Forbidden().describe("You cannot modify project " + proj_id)
+        
+        pk = self.request_params['pk']
+        name = self.request_params['name']
+        value = self.request_params['value']
+        
+        if pk == 'template':
+            # modify template property
+            log.debug('modify template "%s": %s=%s' % (template_id, name, value))
+            setattr(tmpl, name, value)
+            
+        if 'template.params' in pk:
+            # modify one of the params
+            t, p, param_id = pk.split('.')
+            log.debug('modify template parameter "%s.%s": %s=%s' % (template_id, param_id, name, value))
+            for p in tmpl.params:
+                if p['id'] == param_id:
+                    p[name] = value
+                    tmpl.params.changed()
+                    break
+            
+        if 'erase.params' in pk:
+            # remove one of the params
+            e, p, param_id = pk.split('.')
+            log.debug('remove template paramter "%s.%s"' % (template_id, param_id))
+            params = copy.deepcopy(tmpl.params)
+            tmpl.params.clear()
+            for p in params:
+                if p['id'] != param_id:
+                    tmpl.params.append(p)
+            tmpl.params.changed()
+            
+        if 'new.params' in pk:
+            log.debug('new template parameter "%s.%s"' % (template_id, value['id']))
+            tmpl.params.append(value)
+            tmpl.params.changed()
+        
+        s.add(tmpl)
+        self.commit_changes(s)
+        return self.get_objects(mgen.model.Template,
+                                self.query(),
+                                tmpl.template_id)
 
 class Items(GenericModelHandler):
     """Items restfull interface"""
@@ -438,13 +517,13 @@ class Items(GenericModelHandler):
     
     @authenticated
     @jsonify
-    def get(self, oid=None):
+    def get(self, item_id=None):
         """GET list or single project"""
         log.debug('REST GET %s -> %s' % (self.request.path,
-            pprint.pformat(self.page_arguments) if oid is None else '%s=%s' % (
-                get_primary_key(mgen.model.Item), oid) ))
+            pprint.pformat(self.page_arguments) if item_id is None else '%s=%s' % (
+                get_primary_key(mgen.model.Item), item_id) ))
         
-        return self.get_objects(mgen.model.Item, self.query(), oid)
+        return self.get_objects(mgen.model.Item, self.query(), item_id)
         
     @authenticated
     @jsonify

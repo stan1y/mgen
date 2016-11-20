@@ -1,0 +1,186 @@
+{% extends dashboard.html %}
+
+{% block title %}
+Template : {{ escape(template.name) }}
+{% end %}
+
+{% block head %}
+<script type="text/javascript" src="/static/js/dashboard.js"></script>
+<script type="text/javascript" src="/static/js/template.js"></script>
+{% end %}
+
+
+{% block dashboard-frame %}
+
+<div class="container">
+  
+  <!-- Page globals -->
+  <input type="hidden" id="project-id" value="{{ escape(template.project.project_id.hex) }}" />
+  <input type="hidden" id="template-id" value="{{ escape(template.template_id.hex) }}" />
+  {% include "project-permissions.html" %}
+  
+  
+  <div class="page-header">
+    <div class="row">
+      
+      <!-- Template preview -->
+      <div class="col-xs-2">
+        <iframe name="template-preview" id="new-template-preview" style="margin-top: 15px; width: 150px; height: 200px;"></iframe>
+      </div>
+      
+      
+      <!-- Template Details -->
+      <div class="col-xs-3">
+        
+        {% if allow_edit %}
+        <h1>
+        <a href="#" id="name" 
+            class="editable editable-click"
+            data-type="text",
+            data-pk="template" 
+            data-url="/api/templates/{{ template.template_id.hex }}"
+            data-title="Template name">
+          {{ escape(template.name) }}
+        </a>
+        </h1>
+        {% else %}
+        <h1>{{ escape(template.name) }}</h1>
+        {% end %}
+          
+        </h1>
+        
+        {% if allow_edit %}
+        <h4>
+        <a href="#" id="type"
+            class="editable editable-click"
+            data-type="select",
+            data-pk="template" 
+            data-url="/api/templates/{{ template.template_id.hex }}"
+            data-title="Template type">
+          {{ escape(template_types[template.type]) }}
+        </a>
+        </h4>
+        {% else %}
+        <h4>{{ escape(template.type) }}</h4>
+        {% end %}
+        
+        {% if allow_build %}
+        <div class="btn-group" role="group" aria-label="...">
+          <button id="template-add-param" class="btn btn-default">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Preview
+          </button>
+        </div>
+        {% end %}
+      
+      </div>
+      
+      <!-- Template parameters -->
+      <div class="col-xs-6 col-md-4">
+        
+        <div class="btn-group" role="group" aria-label="...">
+          {% if allow_edit %}
+          <button id="template-add-param" class="btn btn-default">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 
+          </button>
+          <button id="template-remove-param" class="btn btn-default disabled">
+            <span class="glyphicon glyphicon-minus" aria-hidden="true"></span> 
+          </button>
+          {% end %}
+        </div>
+        
+        <table id="template-params" class="table table-bordered table-striped" style="clear: both">
+          <caption>Template Parameters</caption>
+          
+          {% for param in template.params %}
+          <tr>
+            <td style="text-align: center;">
+              <input type="checkbox" class="template-param-select" data-param-id="{{ param['id'] }}" />
+            </td>
+            <td>
+              {% if allow_edit %}
+              <span>
+              <a href="#"
+                    id="name"
+                    class="template-param editable editable-click"
+                    data-type="text" 
+                    data-pk="template.params.{{ escape(param['id']) }}" 
+                    data-url="/api/templates/{{ template.template_id.hex }}"
+                    data-title="Parameter name">
+                {{ escape(param['name']) }}
+              </a>
+              </span>
+              {% else %}
+              <span>{{ escape(param['name']) }}</span>
+              {% end %}
+            </td>
+            <td>
+              {% if allow_edit %}
+              <span>
+              <a href="#"
+                    id="default"
+                    class="template-param editable editable-click"
+                    data-type="text" 
+                    data-pk="template.params.{{ escape(param['id']) }}" 
+                    data-url="/api/templates/{{ template.template_id.hex }}"
+                    data-title="Default value">
+                {{ escape(param['default']) }}
+              </a>
+              </span>
+              {% else %}
+              <span>{{ escape(param['default']) }}</span>
+              {% end %}
+            </td>
+            <td>
+              {% if allow_edit %}
+              <span>
+              <a href="#"
+                    id="description"
+                    class="template-param editable editable-click"
+                    data-type="text" 
+                    data-pk="template.params.{{ escape(param['id']) }}" 
+                    data-url="/api/templates/{{ template.template_id.hex }}"
+                    data-title="Description">
+                {{ escape(param['description']) }}
+              </a>
+              </span>
+              {% else %}
+              <span>{{ escape(param['description']) }}</span>
+              {% end %}
+            </td>
+          </tr>
+          {% end %}
+        </table>
+      </div>
+      
+    </div>
+  </div>
+  
+  <!-- Template Data -->
+  <div class="container-fluid">
+    <div class="row">
+      
+      <div class="col-xs-12 col-md-8">
+        <p class="help-block">Template body data</p>
+        {% if allow_edit %}
+        <pre href="#"
+              id="data"
+              class="editable"
+              data-type="textarea" 
+              data-rows="20" 
+              data-pk="template" 
+              data-url="/api/templates/{{ template.template_id.hex }}"
+              data-title="Template Body Data">
+          {{ escape(template.data) }}
+        </pre>
+        {% else %}
+        <pre>{{ escape(template.data) }}</pre>
+        {% end %}
+      </div>
+      
+    </div>
+    
+  </div>
+  
+</div>
+
+{% end %}

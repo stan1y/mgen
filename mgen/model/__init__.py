@@ -85,8 +85,6 @@ class SortModelMixin(object):
                     continue
                     
                 pname = srt['property']
-                if hasattr(cls, 'translate_property'):
-                    pname = cls.translate_property(pname)
                 prop = '%s.%s' % (cls.__tablename__, pname)
                 
                 direction = srt['direction']
@@ -113,30 +111,33 @@ class FilterModelMixin(object):
     @classmethod
     def filter(cls, query, filtering):
         try:
+            # expect array of objects
             for flt in json.loads(filtering):
                 if not hasattr(cls, str(flt['property'])):
                     log.debug('ignoring filter property [%s]' % flt['property'])
                     continue
                 
                 pname = flt['property']
-                if hasattr(cls, 'translate_property'):
-                    pname = cls.translate_property(pname)
-                    
-                prop = '%s.%s' % (cls.__tablename__, pname)
                 value = flt['value']
+                prop = '%s.%s' % (cls.__tablename__, pname)
 
                 if isinstance(value, str):
-                    if value.isdigit():
-                        query = query.filter('%s = %s' % (prop, value.encode('utf-8')))
+                    if 'like:' in value:
+                        prefix, val = value.split(':')
+                        if re.match('^[\w@.]+$', val):
+                            query = query.filter('%s LIKE "%%%s%%"' % (prop, val))
                     else:
-                        if re.match('^[\w@.]+$', value):
-                            query = query.filter('%s LIKE "%%%s%%"' % (prop, value))
-
-                if isinstance(value, (int, float, bool)):
+                        query = query.filter('%s = \'%s\'' % (prop, value))
+                        
+                elif isinstance(value, (int, float, bool)):
                     query = query.filter('%s = %d' % (prop, value))
 
-                if value == None:
+                elif value == None:
                     query = query.filter('%s IS NULL' % (prop))
+                
+                else:
+                    raise ValueError("cannot filter with \"%s\"" % value)
+
             return query
         except ValueError:
             raise mgen.error.BadRequest().describe('invalid filter arguments')
@@ -154,9 +155,6 @@ class RangeModelMixin(object):
                     continue
 
                 pname = flt['property']
-                if hasattr(cls, 'translate_property'):
-                    pname = cls.translate_property(pname)
-
                 prop = '%s.%s' % (cls.__tablename__, pname)
                 value_from = flt['value_from']
                 value_to = flt['value_to']

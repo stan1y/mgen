@@ -6,15 +6,20 @@ $(document).ready(function() {
     
     var projectId = $('#project-id').val()
     
-    /* Templates container */
+    /** 
+     * Templates container 
+     */
+    
     var templatesCnt = $().itemsContainer('project-templates', {
         emptyMsg: "No templates in project."
     })
-    templatesCnt.setDefaultRenderFunc(function(item) {
+    templatesCnt.setDefaultRenderFunc(function(tmpl) {
         return $('<div class="col-xs-6 col-md-4">' +
-            '<h2>' + item.name + '</h2>' +
-            '<h4>' + item.type + '</h4>' +
-        '</div>')
+                    '<h2><a href="/template/' + tmpl.id + '">' + 
+                    tmpl.name + 
+                    '</a></h2>' +
+                    '<h4>' + tmpl.type + '</h4>' +
+                '</div>')
     })
     templatesCnt.setSource($().dataQuery("templates").filter({project_id: projectId}))
     templatesCnt.update()
@@ -69,13 +74,23 @@ $(document).ready(function() {
         
         // collect parameters for this template
         var params = []
-        $('input[name=template-parameter]').each(function(i, inp) {
-            params.push($(inp).val())
+        $('div.template-param').each(function(divIdx, divCont) {
+            var paramData = {
+                'id': Math.random().toString(36).substring(7)
+            }
+            $(divCont).find('input.template-param-prop').each(function(inpIdx, inp) {
+                var propName = $(inp).attr('data-param-prop'),
+                    propValue = $(inp).val()
+                paramData[propName] = propValue
+                
+            })
+            params.push(paramData)
         })
         
         $.ajax('/api/templates', {
             method: 'POST',
             dataType: "json",
+            contentType: "application/json",
             data: JSON.stringify({
                 project_id: projectId,
                 name: $('#new-template-name').val(),

@@ -61,13 +61,18 @@
     var DataQuery = function(collectionName) {
         this.collectionName = collectionName
         this.apiPath = '/api/' + this.collectionName
-        this.flt = {}
+        this.flt = []
         this.paging = {}
         this.data = []
     }
     
     DataQuery.prototype.filter = function(flt) {
-        this.flt = flt
+        for (var key in flt) {
+            this.flt.push({
+                property: key,
+                value: flt[key]
+            })
+        }
         return this
     }
     
@@ -101,8 +106,9 @@
         return $.ajax(this.apiPath, {
             method: "GET",
             dataType: "json",
+            contentType: "application/json",
             data: {
-                filter: this.flt,
+                filter: self.flt.length > 0 ? JSON.stringify(self.flt) : undefined,
                 page: self.paging.page,
                 start: self.paging.start,
                 limit: self.paging.limit
@@ -125,8 +131,9 @@
         return $.ajax(this.apiPath, {
             method: "GET",
             dataType: "json",
+            contentType: "application/json",
             data: {
-                filter: this.flt,
+                filter: self.flt.length > 0 ? JSON.stringify(self.flt) : undefined,
                 page: self.paging.page,
                 start: self.paging.start,
                 limit: self.paging.limit

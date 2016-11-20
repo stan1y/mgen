@@ -18,9 +18,9 @@ var renderProject = function(proj) {
         $("#project-deploy").addClass('disabled')
 }
 
-var projectId = $('#project-id').val()
-
 $(document).ready(function() {
+    
+    var projectId = $('#project-id').val()
     
     /* Project details */
     $().dataQuery('projects').filter({project_id: projectId}).one(renderProject)
@@ -73,6 +73,7 @@ $(document).ready(function() {
         $.ajax('/items', {
             method: "POST",
             dataType: "json",
+            contentType: "application/json",
             data: JSON.stringify({
                 project_id: projectId,
                 name: $('#new-item-name').val(),
@@ -137,6 +138,7 @@ $(document).ready(function() {
         $.ajax('/api/pages', {
             method: 'POST',
             dataType: "json",
+            contentType: "application/json",
             data: JSON.stringify({
                 project_id: projectId,
                 template_id: $("#new-page-template").val(),

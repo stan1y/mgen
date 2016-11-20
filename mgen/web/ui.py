@@ -45,39 +45,41 @@ class Overview(BaseRequestHandler):
 
 class Project(BaseRequestHandler, ProjectPermissionMixin):
     @authenticated
-    def get(self, oid):
+    def get(self, project_id):
         s = session()
-        proj = s.query(mgen.model.Project).filter_by(project_id=oid).one()
+        proj = s.query(mgen.model.Project).filter_by(project_id=project_id).one()
         p = self.get_permissions(proj)
         if p['forbidden']:
-             raise mgen.error.Forbidden().describe('access denied to project id "%s"' % oid)
+             raise mgen.error.Forbidden().describe('access denied to project id "%s"' % project_id)
         
         log.debug('displaying project %s' % proj.project_id)
         return self.render("project.html", 
                            user=self.current_user,
                            profile=self.current_profile,
-                           project=proj,
                            item_types=mgen.generator.item_types,
                            template_types=mgen.generator.template.template_types,
+                           project=proj,
                            **p
                           )
                            
 class Template(BaseRequestHandler, ProjectPermissionMixin):
     @authenticated
-    def get(self, oid):
+    def get(self, template_id):
         s = session()
-        tmpl = s.query(mgen.model.Template).filter_by(template_id=oid).one()
+        tmpl = s.query(mgen.model.Template).filter_by(template_id=template_id).one()
         p = self.get_permissions(tmpl.project)
         if p['forbidden']:
              raise mgen.error.Forbidden().describe('access denied to project id "%s"' % tmpl.project_id)
         
         log.debug('displaying template %s' % tmpl.template_id)
-        return self.render("project.html", 
+        return self.render("template.html", 
                            user=self.current_user,
                            profile=self.current_profile,
-                           the_template=tmpl,
+                           item_types=mgen.generator.item_types,
                            template_types=mgen.generator.template.template_types,
+                           template=tmpl,
                            **p)
+
 
 class Item(BaseRequestHandler):
     pass
